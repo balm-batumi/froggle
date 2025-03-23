@@ -266,8 +266,7 @@ async def process_ad_description(message: types.Message, state: FSMContext):
     category = data.get("category")
     await state.update_data(description=description)
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Подтвердите, что все загружено", callback_data="media_confirm"),
-         InlineKeyboardButton(text="Пропустить загрузку медиа", callback_data="media_skip")],
+        [InlineKeyboardButton(text="Пропустить загрузку медиа", callback_data="media_skip")],
         [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:media"),
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
@@ -277,9 +276,7 @@ async def process_ad_description(message: types.Message, state: FSMContext):
     )
     await state.set_state(AdAddForm.media)
 
-
 # Загрузка медиа
-
 @ad_router.message(F.photo | F.video, StateFilter(AdAddForm.media))
 async def process_ad_media(message: types.Message, state: FSMContext):
     if message.from_user.is_bot:
@@ -294,12 +291,12 @@ async def process_ad_media(message: types.Message, state: FSMContext):
     media_group_id = message.media_group_id
     data = await state.get_data()
     category = data.get("category")
-    media_file_ids = data.get("media_file_ids", [])
+    media_file_ids = data.get("media_file_ids", []) or []  # Убеждаемся, что это всегда список
     media_message_id = data.get("media_message_id")
     media_groups = data.get("media_groups", {})
     last_group_time = data.get("last_group_time", 0)
     current_time = asyncio.get_event_loop().time()
-    logger.debug(f"Начало обработки: file_count={len(media_file_ids)}, media_message_id={media_message_id}, media_group_id={media_group_id}")
+    logger.debug(f"Начало обработки медиа: file_id={file_id}, media_group_id={media_group_id}, текущие файлы={media_file_ids}")
 
     if file_id not in media_file_ids:
         media_file_ids.append(file_id)
@@ -311,10 +308,10 @@ async def process_ad_media(message: types.Message, state: FSMContext):
             await state.update_data(media_file_ids=media_file_ids[:10], media_groups=media_groups, last_group_time=current_time)
             logger.debug(f"Добавлен файл в группу: {media_group_id}, files={group_files}")
 
-            # Ждем 1 секунду после последнего файла группы
+            # Ждём 1 секунду после последнего файла группы
             await asyncio.sleep(1)
             data = await state.get_data()
-            if data.get("last_group_time") == current_time:  # Если время не обновилось, это последний файл
+            if data.get("last_group_time") == current_time:  # Это последний файл группы
                 file_count = len(data.get("media_file_ids", []))
                 text = f"Загружено {file_count} файлов" if file_count > 1 else f"Загружено {file_count} файл"
                 try:
@@ -330,56 +327,39 @@ async def process_ad_media(message: types.Message, state: FSMContext):
                         )
                         logger.debug(f"Отредактировано сообщение: message_id={media_message_id}, text='{text}'")
                 except Exception as e:
-                    logger.error(f"Ошибка при обработке медиа для telegram_id={message.from_user.id}: {e}")
-                    await message.answer("⚠ Ошибка при загрузке файла. Попробуйте снова.")
-
+                    logger.error(f"Ошибка при обработке медиа-группы для telegram_id={message.from_user.id}: {e}")
+                    await message.answer("⚠ Ошибка при загрузке файлов. Попробуйте снова.")
                 # Автоматический переход к контактам
                 await state.set_state(AdAddForm.contacts)
-                await _send_contact_options(message, state)  # Исправленный вызов
+                await _send_contact_options(message, state)
         else:
             # Одиночный файл
             file_count = len(media_file_ids)
             text = f"Загружено {file_count} файлов" if file_count > 1 else f"Загружено {file_count} файл"
+            await state.update_data(media_file_ids=media_file_ids[:10])
+            logger.debug(f"Сохранён одиночный файл: media_file_ids={media_file_ids}")
             try:
                 if not media_message_id:
                     msg = await message.answer(text)
                     await state.update_data(media_message_id=msg.message_id)
-                    logger.debug(f"Создано сообщение: message_id={msg.message_id}, text='{text}'")
+                    logger.debug(f"Создано сообщение для одиночного файла: message_id={msg.message_id}, text='{text}'")
                 else:
                     await message.bot.edit_message_text(
                         text=text,
                         chat_id=message.chat.id,
                         message_id=media_message_id
                     )
-                    logger.debug(f"Отредактировано сообщение: message_id={media_message_id}, text='{text}'")
+                    logger.debug(f"Отредактировано сообщение для одиночного файла: message_id={media_message_id}, text='{text}'")
             except Exception as e:
-                logger.error(f"Ошибка при обработке медиа для telegram_id={message.from_user.id}: {e}")
-                await message.answer("⚠ Ошибка при обработке файла. Попробуйте снова.")
-
+                logger.error(f"Ошибка при обработке одиночного медиа для telegram_id={message.from_user.id}: {e}")
+                await message.answer("⚠ Ошибка при загрузке файла. Попробуйте снова.")
             # Автоматический переход к контактам
             await state.set_state(AdAddForm.contacts)
-            await _send_contact_options(message, state)  # Исправленный вызов
+            await _send_contact_options(message, state)
     else:
         logger.debug(f"Файл {file_id} уже в списке для {message.from_user.id}")
 
-
-@ad_router.callback_query(F.data == "media_confirm", StateFilter(AdAddForm.media))
-async def process_ad_complete(call: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    media_file_ids = data.get("media_file_ids", [])
-    file_count = len(media_file_ids)
-    text = f"Загружено {file_count} файлов" if file_count > 0 else "Медиа не загружены"
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Подтвердите", callback_data="confirm_contact")],
-        [InlineKeyboardButton(text="Назад", callback_data="back")]
-    ])
-    await call.message.edit_text(text, reply_markup=keyboard)
-    await state.set_state(AdAddForm.contacts)
-
-
-
-
-# Завершение загрузки медиа
+# Завершение загрузки медиа (оставлено для совместимости, но не используется при автоматическом переходе)
 @ad_router.callback_query(F.data == "media_confirm", StateFilter(AdAddForm.media))
 async def process_ad_complete(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -402,14 +382,13 @@ async def process_ad_complete(call: types.CallbackQuery, state: FSMContext):
         logger.debug(f"Переход к выбору контактов для пользователя {call.from_user.id}")
         await state.set_state(AdAddForm.contacts)
         await _send_contact_options(call, state)
-
+    await call.answer()
 
 # Пропуск загрузки медиа
 @ad_router.callback_query(F.data == "media_skip", StateFilter(AdAddForm.media))
 async def process_ad_skip(call: types.CallbackQuery, state: FSMContext):
-    await state.update_data(media_file_ids=None)
+    await state.update_data(media_file_ids=[])  # Используем пустой список вместо None
     logger.info(f"Пользователь {call.from_user.id} пропустил загрузку медиа")
-    await call.message.edit_text("Медиа пропущены")
     if call.from_user.is_bot:
         logger.debug(f"Пользователь {call.from_user.id} — бот, дальнейшие действия невозможны")
         await call.message.bot.send_message(
@@ -424,11 +403,23 @@ async def process_ad_skip(call: types.CallbackQuery, state: FSMContext):
         await _send_contact_options(call, state)
     await call.answer()
 
-async def _send_contact_options(message: types.Message, state: FSMContext):
-    telegram_id = str(message.from_user.id)
-    username = message.from_user.username
+async def _send_contact_options(message_or_call, state: FSMContext):
+    # Определяем telegram_id и username в зависимости от типа входных данных
+    if isinstance(message_or_call, types.Message):
+        telegram_id = str(message_or_call.from_user.id)
+        username = message_or_call.from_user.username
+        is_bot = message_or_call.from_user.is_bot
+        chat_id = message_or_call.from_user.id
+        bot = message_or_call.bot
+    else:  # isinstance(message_or_call, types.CallbackQuery)
+        telegram_id = str(message_or_call.from_user.id)
+        username = message_or_call.from_user.username
+        is_bot = message_or_call.from_user.is_bot
+        chat_id = message_or_call.from_user.id
+        bot = message_or_call.message.bot
+
     data = await state.get_data()
-    if message.from_user.is_bot:
+    if is_bot:
         logger.debug(f"Сообщение от бота {telegram_id} проигнорировано")
         return
 
@@ -452,12 +443,11 @@ async def _send_contact_options(message: types.Message, state: FSMContext):
                     InlineKeyboardButton(text="Назад", callback_data="back")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     logger.debug(f"Отправка сообщения с контактами для {telegram_id}")
-    await message.bot.send_message(
-        chat_id=message.from_user.id,
+    await bot.send_message(
+        chat_id=chat_id,
         text=AD_CATEGORIES[data.get('category', 'unknown')]["texts"]["contacts"],
         reply_markup=keyboard
     )
-
 
 # Выбор контактов через инлайн-кнопки
 @ad_router.callback_query(F.data.startswith("contact:"), StateFilter(AdAddForm.contacts))
