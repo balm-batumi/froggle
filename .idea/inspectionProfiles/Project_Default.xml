@@ -1,0 +1,30 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="17">
+            <item index="0" class="java.lang.String" itemvalue="et_xmlfile" />
+            <item index="1" class="java.lang.String" itemvalue="texttable" />
+            <item index="2" class="java.lang.String" itemvalue="win32_setctime" />
+            <item index="3" class="java.lang.String" itemvalue="pydantic_core" />
+            <item index="4" class="java.lang.String" itemvalue="pyasn1_modules" />
+            <item index="5" class="java.lang.String" itemvalue="typing_extensions" />
+            <item index="6" class="java.lang.String" itemvalue="aiogram" />
+            <item index="7" class="java.lang.String" itemvalue="aiohappyeyeballs" />
+            <item index="8" class="java.lang.String" itemvalue="aiohttp" />
+            <item index="9" class="java.lang.String" itemvalue="multidict" />
+            <item index="10" class="java.lang.String" itemvalue="attrs" />
+            <item index="11" class="java.lang.String" itemvalue="alembic" />
+            <item index="12" class="java.lang.String" itemvalue="transliterate" />
+            <item index="13" class="java.lang.String" itemvalue="SQLAlchemy" />
+            <item index="14" class="java.lang.String" itemvalue="python-dotenv" />
+            <item index="15" class="java.lang.String" itemvalue="thread" />
+            <item index="16" class="java.lang.String" itemvalue="aiogram-middlewares" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
