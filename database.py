@@ -41,20 +41,22 @@ class Advertisement(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     category = Column(String)
     city = Column(String, nullable=True)
+    tags = Column(ARRAY(String), nullable=True)
     title_ru = Column(String)
     description_ru = Column(String)
-    tags = Column(ARRAY(String), nullable=True)
+    price = Column(String(30), nullable=True)
     media_file_ids = Column(ARRAY(String), nullable=True)
     contact_info = Column(String, nullable=True)
     status = Column(String, default="pending")
     created_at = Column(DateTime, default=func.now())
 
-# Модель Tag
+
 class Tag(Base):
     __tablename__ = "tags"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     category = Column(String, nullable=False)
+    is_primary = Column(Boolean, default=False)  # Новый столбец для обязательных тегов
 
 # Модель City
 class City(Base):
@@ -108,8 +110,8 @@ async def is_favorite(user_id: int, advertisement_id: int) -> bool:
 
 
 
-# Функция добавления объявления
-async def add_advertisement(user_id: int, category: str, city: str, title_ru: str, description_ru: str, tags: list[str], media_file_ids: list[str], contact_info: str) -> int:
+# Функция добавления объявления в базу данных с учетом цены
+async def add_advertisement(user_id: int, category: str, city: str, title_ru: str, description_ru: str, tags: list[str], media_file_ids: list[str], contact_info: str, price: str = None) -> int:
     async with AsyncSessionLocal() as session:
         ad = Advertisement(
             user_id=user_id,
@@ -119,12 +121,14 @@ async def add_advertisement(user_id: int, category: str, city: str, title_ru: st
             description_ru=description_ru,
             tags=tags,
             media_file_ids=media_file_ids,
-            contact_info=contact_info
+            contact_info=contact_info,
+            price=price  # Добавляем цену
         )
         session.add(ad)
         await session.commit()
         await session.refresh(ad)
         return ad.id
+
 
 # Функция получения тегов для категории
 async def get_category_tags(category: str):

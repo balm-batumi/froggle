@@ -1,13 +1,11 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-# Временный хардкод категорий до создания data/categories.py
-CATEGORIES = ["Услуги", "Еда", "Жильё", "Общение", "Авто", "Барахолка", "Шоппинг"]
+from data.categories import CATEGORIES
 
 # Главное меню с инлайн-кнопками
 def get_main_menu_keyboard():
     buttons = [
-        InlineKeyboardButton(text=category, callback_data=f"category:{category}")
-        for category in CATEGORIES
+        InlineKeyboardButton(text=CATEGORIES[cat]["display_name"], callback_data=f"category:{cat}")
+        for cat in CATEGORIES
     ]
     # Добавляем "Помощь" и "Настройки" в последнюю строку
     buttons.extend([

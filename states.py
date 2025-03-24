@@ -8,6 +8,7 @@ class AdAddForm(StatesGroup):
     tags = State()
     title = State()
     description = State()
+    price = State()  # Новая строка
     media = State()
     contacts = State()
     confirm = State()
@@ -18,3 +19,4 @@ class AdminForm(StatesGroup):
 class AdsViewForm(StatesGroup):
     select_category = State()
     select_city = State()
+
