@@ -9,6 +9,8 @@ from data.categories import CATEGORIES
 from tools.utils import render_ad
 from loguru import logger
 
+from states import AdsViewForm
+
 menu_router = Router()
 
 # Клавиатура подменю для категорий
@@ -21,8 +23,9 @@ ad_start_keyboard = ReplyKeyboardMarkup(
     one_time_keyboard=False
 )
 
+# Обработчик команды /start для показа главного меню
 @menu_router.message(Command("start"))
-async def start_handler(message: types.Message):
+async def start_handler(message: types.Message, state: FSMContext):
     telegram_id = str(message.from_user.id)
     logger.info(f"Получена команда /start от telegram_id={telegram_id}")
 
@@ -42,6 +45,8 @@ async def start_handler(message: types.Message):
         else:
             logger.debug(f"Пользователь с telegram_id={telegram_id} уже существует")
 
+    await state.set_state(AdsViewForm.select_category)  # Устанавливаем состояние для выбора категории
+    logger.debug(f"Отправляем главное меню с клавиатурой: {get_main_menu_keyboard().__class__.__name__}")
     await message.answer(
         "Добро пожаловать в Froggle! Выберите категорию:",
         reply_markup=get_main_menu_keyboard()
@@ -265,10 +270,13 @@ async def remove_from_favorites_handler(call: types.CallbackQuery):
 
     await show_favorites_handler(call)
 
+# Обрабатывает возврат в главное меню
 @menu_router.callback_query(lambda call: call.data == "action:back")
-async def back_handler(call: types.CallbackQuery):
-    await call.message.edit_text(
-        "Возврат в главное меню :",
+async def back_handler(call: types.CallbackQuery, state: FSMContext):
+    await state.set_state(AdsViewForm.select_category)
+    await call.message.bot.send_message(
+        chat_id=call.from_user.id,
+        text="Возврат в главное меню",
         reply_markup=get_main_menu_keyboard()
     )
     await call.answer()

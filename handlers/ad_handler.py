@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 from aiogram import F
 from states import AdAddForm
-from database import get_db, User, Tag, City, Advertisement, add_advertisement, get_category_tags, get_cities, select
+from database import get_db, User, Tag, City, Advertisement, add_advertisement, get_category_tags, get_cities, get_all_category_tags, select  # Добавлен get_all_category_tags
 from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
 from loguru import logger
@@ -41,21 +41,58 @@ async def process_ad_start(message: types.Message, state: FSMContext):
         reply_markup=keyboard
     )
 
-# Обработчик выбора города с переходом к тегам в сетке по 3
+
+# Обработчик callback’а action:add для начала добавления объявления с текущей категорией
+@ad_router.callback_query(F.data == "action:add")
+async def process_ad_start_from_callback(call: types.CallbackQuery, state: FSMContext):
+    logger.info(f"process_ad_start_from_callback вызвана для telegram_id={call.from_user.id}")
+    data = await state.get_data()
+    category = data.get("category")
+    if not category or category not in CATEGORIES:
+        logger.info(f"Категория не выбрана или неверна: {category}")
+        await call.message.edit_text(
+            "Пожалуйста, выберите категорию из главного меню.\n:",
+            reply_markup=get_main_menu_keyboard()
+        )
+        await state.clear()
+        await call.answer()
+        return
+
+    logger.info(f"Начало добавления объявления в категории {category} для telegram_id={call.from_user.id}")
+    await state.set_state(AdAddForm.city)
+    await state.update_data(category=category)
+    logger.info(f"Отправка меню городов для категории {category}")
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Тбилиси", callback_data=f"city:{category}:Тбилиси"),
+         InlineKeyboardButton(text="Батуми", callback_data=f"city:{category}:Батуми")],
+        [InlineKeyboardButton(text="Кутаиси", callback_data=f"city:{category}:Кутаиси"),
+         InlineKeyboardButton(text="Гори", callback_data=f"city:{category}:Гори")],
+        [InlineKeyboardButton(text="Другой город", callback_data=f"city_other:{category}"),
+         InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:city"),
+         InlineKeyboardButton(text="Назад", callback_data="back")]
+    ])
+    await call.message.edit_text(
+        CATEGORIES[category]["texts"]["city"],
+        reply_markup=keyboard
+    )
+    await call.answer()
+
+
+# Обработчик выбора города для перехода к выбору всех тегов категории
 @ad_router.callback_query(F.data.startswith("city:"), StateFilter(AdAddForm.city))
 async def process_city_selection(call: types.CallbackQuery, state: FSMContext):
     _, category, city = call.data.split(":", 2)
     data = await state.get_data()
     logger.info(f"Выбран город '{city}' для telegram_id={call.from_user.id} в категории {category}")
     await state.update_data(city=city)
-    tags = await get_category_tags(CATEGORIES[category]["tag_category"])
+    tags = await get_all_category_tags(category)  # Используем все теги категории
     if not tags:
         await call.message.edit_text(
             "Нет доступных тегов. Обратитесь к администратору.\n:", reply_markup=get_main_menu_keyboard()
         )
         await state.clear()
         return
-    buttons = [tags[i:i + 3] for i in range(0, len(tags), 3)]  # Сетка по 3
+    buttons = [tags[i:i + 3] for i in range(0, len(tags), 3)]
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
     ])
@@ -66,7 +103,8 @@ async def process_city_selection(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
     await state.set_state(AdAddForm.tags)
 
-# Выбор другого города
+
+# Обрабатывает выбор "Другой город" и отображает список доступных городов
 @ad_router.callback_query(F.data.startswith("city_other:"), StateFilter(AdAddForm.city))
 async def process_city_other(call: types.CallbackQuery, state: FSMContext):
     category = call.data.split(":", 1)[1]
@@ -74,7 +112,7 @@ async def process_city_other(call: types.CallbackQuery, state: FSMContext):
 
     cities = await get_cities()
     main_cities = ["Тбилиси", "Батуми", "Кутаиси", "Гори"]
-    other_cities = [city[1] for city in cities if city[1] not in main_cities]
+    other_cities = [city for city in cities.keys() if city not in main_cities]
     buttons = [
         InlineKeyboardButton(text=city, callback_data=f"city:{category}:{city}")
         for city in other_cities
@@ -87,7 +125,7 @@ async def process_city_other(call: types.CallbackQuery, state: FSMContext):
     )
     await call.answer()
 
-# Обработчик выбора тегов с лимитом 3 и обязательным primary_tag
+# Обработчик выбора тега для добавления в список с отображением всех тегов категории
 @ad_router.callback_query(F.data.startswith("tag_select:"), StateFilter(AdAddForm.tags))
 async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
     tag_id = int(call.data.split(":", 1)[1])
@@ -111,8 +149,8 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
             await call.answer()
             return
 
-        tags_list = await get_category_tags(CATEGORIES[category]["tag_category"])
-        buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]  # Сетка по 3
+        tags_list = await get_all_category_tags(category)  # Используем все теги категории
+        buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]
         keyboard_rows = [
             [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
         ]
@@ -132,6 +170,7 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
             )
         await call.answer()
+
 
 # Обработчик кнопки "Далее" для перехода к вводу названия
 @ad_router.callback_query(F.data == "next_to_title", StateFilter(AdAddForm.tags))

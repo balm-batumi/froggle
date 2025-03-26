@@ -1,169 +1,220 @@
-from aiogram import Router, types, F
+from aiogram import Router, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
-from sqlalchemy import select, func
+from aiogram import F
+from states import AdminForm, AdsViewForm
 from database import get_db, User, Advertisement, select
 from data.constants import get_main_menu_keyboard
-from states import AdminForm
-from tools.utils import render_ad
 from loguru import logger
+from tools.utils import render_ad
 
 admin_router = Router()
 
-# Показывает список объявлений на модерацию с кнопками управления
-@admin_router.callback_query(lambda call: call.data == "admin_moderate")
-async def moderate_handler(call: types.CallbackQuery):
+# Обрабатывает нажатие кнопки "Модерация" и показывает все объявления на модерацию
+@admin_router.callback_query(F.data == "admin_moderate", StateFilter(None, AdsViewForm.select_category))
+async def admin_moderate(call: types.CallbackQuery, state: FSMContext):
     telegram_id = str(call.from_user.id)
     async for session in get_db():
-        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
-        user = user.scalar_one_or_none()
+        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = result.scalar_one_or_none()
         if not user or not user.is_admin:
-            await call.message.edit_text("❌ У вас нет прав.\n:", reply_markup=get_main_menu_keyboard())
+            await call.message.edit_text("У вас нет прав для модерации.\n🏠:", reply_markup=get_main_menu_keyboard())
             return
 
-        ads = await session.execute(
-            select(Advertisement)
-            .where(Advertisement.status == "pending")
-            .order_by(Advertisement.created_at.asc())
+        result = await session.execute(
+            select(Advertisement).where(Advertisement.status == "pending").order_by(Advertisement.id)
         )
-        ads = ads.scalars().all()
+        ads = result.scalars().all()
+        logger.debug(f"Найдено объявлений на модерацию: {len(ads)}, IDs: {[ad.id for ad in ads]}")
         if not ads:
-            await call.message.edit_text("Нет объявлений на модерацию.\n:", reply_markup=get_main_menu_keyboard())
+            await call.message.edit_text("Нет объявлений для модерации.\n🏠:", reply_markup=get_main_menu_keyboard())
             return
 
         for ad in ads:
             buttons = [
-                InlineKeyboardButton(text="Принять", callback_data=f"moderate:approve:{ad.id}"),
-                InlineKeyboardButton(text="Отклонить", callback_data=f"moderate:reject:{ad.id}"),
-                InlineKeyboardButton(text="Удалить", callback_data=f"moderate:delete:{ad.id}")
+                [InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad.id}"),
+                 InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
+                 InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
             ]
             await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
 
-        # Добавляем кнопки с текстом "Режим Модерации"
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        # Кнопки "Помощь" и "Назад" в конце списка
+        final_buttons = [
             [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
              InlineKeyboardButton(text="Назад", callback_data="action:back")]
-        ])
+        ]
         await call.message.bot.send_message(
-            chat_id=call.from_user.id,
-            text="Режим Модерации",
-            reply_markup=keyboard
+            chat_id=telegram_id,
+            text="Режим модерации",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=final_buttons)
         )
 
-@admin_router.callback_query(lambda call: call.data.startswith("moderate:approve:"))
+    await state.set_state(AdminForm.moderation)
+    await call.answer()
+
+
+# Одобряет объявление, отправляет уведомления и обновляет список модерации
+@admin_router.callback_query(F.data.startswith("approve:"), StateFilter(AdminForm.moderation))
 async def approve_ad(call: types.CallbackQuery, state: FSMContext):
-    """Одобряет объявление."""
+    ad_id = int(call.data.split(":")[1])
     telegram_id = str(call.from_user.id)
-    _, action, ad_id = call.data.split(":")
-    ad_id = int(ad_id)
-
     async for session in get_db():
-        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
-        user = user.scalar_one_or_none()
-        if not user or not user.is_admin:
-            await call.answer("❌ У вас нет прав.", show_alert=True)
-            return
-
-        ad = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
-        ad = ad.scalar_one_or_none()
-        if ad and ad.status == "pending":
+        result = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
+        ad = result.scalar_one_or_none()
+        if ad:
             ad.status = "approved"
             await session.commit()
-            logger.info(f"Админ {telegram_id} одобрил объявление ID {ad_id}")
+            # Получаем telegram_id владельца
+            user_result = await session.execute(select(User.telegram_id).where(User.id == ad.user_id))
+            user_telegram_id = user_result.scalar_one_or_none()
+            if user_telegram_id and user_telegram_id != telegram_id:
+                await call.message.bot.send_message(
+                    chat_id=user_telegram_id,
+                    text=f"✅ Ваше объявление #{ad_id} принято и теперь доступно для просмотра."
+                )
+            # Сообщение модератору
             await call.message.bot.send_message(
-                chat_id=call.from_user.id,
-                text=f"✅ Объявление #{ad_id} принято\n🏠:",
-                reply_markup=get_main_menu_keyboard()
+                chat_id=telegram_id,
+                text=f"✅ Объявление #{ad_id} успешно принято."
+            )
+            logger.info(f"Объявление #{ad_id} принято модератором telegram_id={telegram_id}")
+            # Обновляем список объявлений
+            result = await session.execute(
+                select(Advertisement).where(Advertisement.status == "pending").order_by(Advertisement.id)
+            )
+            ads = result.scalars().all()
+            for ad in ads:
+                buttons = [
+                    [InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad.id}"),
+                     InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
+                     InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
+                ]
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+            # Кнопки "Помощь" и "Назад" в конце
+            final_buttons = [
+                [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
+                 InlineKeyboardButton(text="Назад", callback_data="action:back")]
+            ]
+            await call.message.bot.send_message(
+                chat_id=telegram_id,
+                text="Режим модерации",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=final_buttons)
             )
     await call.answer()
 
-@admin_router.callback_query(lambda call: call.data.startswith("moderate:reject:"))
+
+# Отклоняет объявление, отправляет уведомления и обновляет список модерации
+@admin_router.callback_query(F.data.startswith("reject:"), StateFilter(AdminForm.moderation))
 async def reject_ad(call: types.CallbackQuery, state: FSMContext):
-    """Отклоняет объявление."""
+    ad_id = int(call.data.split(":")[1])
     telegram_id = str(call.from_user.id)
-    _, action, ad_id = call.data.split(":")
-    ad_id = int(ad_id)
-
     async for session in get_db():
-        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
-        user = user.scalar_one_or_none()
-        if not user or not user.is_admin:
-            await call.answer("❌ У вас нет прав.", show_alert=True)
-            return
-
-        ad = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
-        ad = ad.scalar_one_or_none()
-        if ad and ad.status == "pending":
+        result = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
+        ad = result.scalar_one_or_none()
+        if ad:
             ad.status = "rejected"
             await session.commit()
-            logger.info(f"Админ {telegram_id} отклонил объявление ID {ad_id}")
+            # Получаем telegram_id владельца
+            user_result = await session.execute(select(User.telegram_id).where(User.id == ad.user_id))
+            user_telegram_id = user_result.scalar_one_or_none()
+            if user_telegram_id and user_telegram_id != telegram_id:
+                await call.message.bot.send_message(
+                    chat_id=user_telegram_id,
+                    text=f"❌ Ваше объявление #{ad_id} отклонено модератором."
+                )
+            # Сообщение модератору
             await call.message.bot.send_message(
-                chat_id=call.from_user.id,
-                text=f"❌ Объявление #{ad_id} отклонено\n🏠:",
-                reply_markup=get_main_menu_keyboard()
+                chat_id=telegram_id,
+                text=f"❌ Объявление #{ad_id} отклонено."
+            )
+            logger.info(f"Объявление #{ad_id} отклонено модератором telegram_id={telegram_id}")
+            # Обновляем список объявлений
+            result = await session.execute(
+                select(Advertisement).where(Advertisement.status == "pending").order_by(Advertisement.id)
+            )
+            ads = result.scalars().all()
+            for ad in ads:
+                buttons = [
+                    [InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad.id}"),
+                     InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
+                     InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
+                ]
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+            # Кнопки "Помощь" и "Назад" в конце
+            final_buttons = [
+                [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
+                 InlineKeyboardButton(text="Назад", callback_data="action:back")]
+            ]
+            await call.message.bot.send_message(
+                chat_id=telegram_id,
+                text="Режим модерации",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=final_buttons)
             )
     await call.answer()
 
-@admin_router.callback_query(lambda call: call.data.startswith("moderate:delete:"))
+
+@admin_router.callback_query(F.data.startswith("delete:"), StateFilter(AdminForm.moderation))
 async def delete_ad(call: types.CallbackQuery, state: FSMContext):
-    """Запрашивает подтверждение удаления объявления."""
-    telegram_id = str(call.from_user.id)
-    _, action, ad_id = call.data.split(":")
-    ad_id = int(ad_id)
-
-    async for session in get_db():
-        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
-        user = user.scalar_one_or_none()
-        if not user or not user.is_admin:
-            await call.answer("❌ У вас нет прав.", show_alert=True)
-            return
-
-        ad = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
-        ad = ad.scalar_one_or_none()
-        if ad:
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="Подтвердить удаление", callback_data=f"delete_confirm:{ad_id}"),
-                 InlineKeyboardButton(text="Отмена", callback_data=f"delete_cancel:{ad_id}")]
-            ])
-            await call.message.edit_text(
-                f"Вы уверены, что хотите удалить объявление #{ad_id}?",
-                reply_markup=keyboard
-            )
-            await state.set_state(AdminForm.confirm_delete)
-    await call.answer()
-
-@admin_router.callback_query(F.data.startswith("moderate:delete:"))
-async def confirm_delete_ad(call: types.CallbackQuery, state: FSMContext):
-    """Подтверждение удаления объявления."""
-    telegram_id = str(call.from_user.id)
-    _, action, ad_id = call.data.split(":")
-    ad_id = int(ad_id)
-    async for session in get_db():
-        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
-        user = user.scalar_one_or_none()
-        if not user or not user.is_admin:
-            await call.message.edit_text("❌ У вас нет прав.\n🏠:", reply_markup=get_main_menu_keyboard())
-            return
-
-        ad = await session.get(Advertisement, ad_id)
-        if not ad:
-            await call.message.edit_text("Объявление не найдено.\n🏠:", reply_markup=get_main_menu_keyboard())
-            return
-
-        await session.delete(ad)
-        await session.commit()
-        logger.info(f"Админ {telegram_id} удалил объявление ID {ad_id}")
-        await call.message.edit_text(f"Объявление #{ad_id} удалено.\n🏠:", reply_markup=get_main_menu_keyboard())
-    await call.answer()
-
-@admin_router.callback_query(F.data.startswith("delete_cancel:"), StateFilter(AdminForm.confirm_delete))
-async def cancel_delete_ad(call: types.CallbackQuery, state: FSMContext):
-    """Отменяет удаление объявления."""
-    telegram_id = str(call.from_user.id)
+    ad_id = int(call.data.split(":")[1])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Да", callback_data=f"delete_confirm:{ad_id}"),
+        InlineKeyboardButton(text="Нет", callback_data="action:back")
+    ]])
     await call.message.edit_text(
-        f"Удаление отменено\n🏠:",
-        reply_markup=get_main_menu_keyboard()
+        f"Вы точно хотите удалить объявление #{ad_id}?",
+        reply_markup=keyboard
     )
-    await state.clear()
+    await state.set_state(AdminForm.confirm_delete)
+    await call.answer()
+
+
+# Удаляет объявление, отправляет уведомления и обновляет список модерации
+@admin_router.callback_query(F.data.startswith("delete_confirm:"), StateFilter(AdminForm.confirm_delete))
+async def delete_ad_confirmed(call: types.CallbackQuery, state: FSMContext):
+    ad_id = int(call.data.split(":")[1])
+    telegram_id = str(call.from_user.id)
+    async for session in get_db():
+        result = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
+        ad = result.scalar_one_or_none()
+        if ad:
+            # Получаем telegram_id владельца перед удалением
+            user_result = await session.execute(select(User.telegram_id).where(User.id == ad.user_id))
+            user_telegram_id = user_result.scalar_one_or_none()
+            await session.delete(ad)
+            await session.commit()
+            if user_telegram_id and user_telegram_id != telegram_id:
+                await call.message.bot.send_message(
+                    chat_id=user_telegram_id,
+                    text=f"🗑 Ваше объявление #{ad_id} удалено модератором."
+                )
+            # Сообщение модератору
+            await call.message.bot.send_message(
+                chat_id=telegram_id,
+                text=f"🗑 Объявление #{ad_id} удалено."
+            )
+            logger.info(f"Объявление #{ad_id} удалено модератором telegram_id={telegram_id}")
+            # Обновляем список объявлений
+            result = await session.execute(
+                select(Advertisement).where(Advertisement.status == "pending").order_by(Advertisement.id)
+            )
+            ads = result.scalars().all()
+            for ad in ads:
+                buttons = [
+                    [InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad.id}"),
+                     InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
+                     InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
+                ]
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+            # Кнопки "Помощь" и "Назад" в конце
+            final_buttons = [
+                [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
+                 InlineKeyboardButton(text="Назад", callback_data="action:back")]
+            ]
+            await call.message.bot.send_message(
+                chat_id=telegram_id,
+                text="Режим модерации",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=final_buttons)
+            )
+    await state.set_state(AdminForm.moderation)
     await call.answer()

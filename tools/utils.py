@@ -3,6 +3,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMedia
 from database import Advertisement
 from loguru import logger
 from database import mark_ad_as_viewed
+from data.categories import CATEGORIES
 
 
 # Рендерит объявление с медиа и форматированным текстом
@@ -17,6 +18,7 @@ async def render_ad(ad: Advertisement, bot: Bot, chat_id: int, show_status: bool
     status_text = f"Статус: {ad.status}" if show_status and ad.status else ""
 
     text = (
+        f"<b>{CATEGORIES[ad.category]['display_name']}</b> в <b>{ad.city}</b>\n"
         f"🏷️ {', '.join(ad.tags) if ad.tags else 'Нет тегов'}\n"
         f"<b>{title}</b>\n"
         f"{description[:1000] + '...' if len(description) > 1000 else description}\n"
@@ -26,7 +28,7 @@ async def render_ad(ad: Advertisement, bot: Bot, chat_id: int, show_status: bool
     if status_text:
         text += f"\n{status_text}"
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons]) if buttons else None
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
     await bot.send_message(
         chat_id=chat_id,

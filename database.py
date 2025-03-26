@@ -156,24 +156,48 @@ async def add_advertisement(user_id: int, category: str, city: str, title_ru: st
         return ad.id
 
 
-# Возвращает теги, присутствующие в объявлениях категории и города
+# Функция для получения тегов по категории и городу из объявлений
 async def get_category_tags(category: str, city: str) -> list[tuple[int, str]]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Tag.id, Tag.name)
-            .join(Advertisement, Advertisement.tags.contains(Tag.name))
+            .join(Advertisement, Advertisement.tags.any(Tag.name))  # Используем ANY для проверки строки в массиве
             .where(Advertisement.category == category, Advertisement.city == city, Advertisement.status == "approved")
             .distinct()
             .order_by(Tag.name)
         )
         return result.all()
 
-# Функция получения списка городов
-async def get_cities():
-    async for session in get_db():
-        result = await session.execute(select(City))
-        cities = result.scalars().all()
-        return [(city.id, city.name) for city in cities]
+
+# Функция для получения всех тегов заданной категории из таблицы tags
+async def get_all_category_tags(category: str) -> list[tuple[int, str]]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Tag.id, Tag.name)
+            .where(Tag.category == category)
+            .order_by(Tag.name)
+        )
+        return result.all()
+
+
+# Функция для получения городов: всех или отфильтрованных по категории
+async def get_cities(category=None):
+    async with AsyncSessionLocal() as session:
+        if category is None:
+            # Возвращаем все города из таблицы cities как {city: id}
+            result = await session.execute(select(City))
+            cities = result.scalars().all()
+            return {city.name: city.id for city in cities}
+        else:
+            # Возвращаем города с количеством объявлений по категории из advertisements
+            result = await session.execute(
+                select(Advertisement.city, func.count(Advertisement.id))
+                .where(Advertisement.category == category, Advertisement.status == "approved")
+                .group_by(Advertisement.city)
+                .having(func.count(Advertisement.id) > 0)
+            )
+            return dict(result.all())
+
 
 # Инициализация базы данных
 async def init_db():

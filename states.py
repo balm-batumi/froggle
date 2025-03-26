@@ -14,6 +14,7 @@ class AdAddForm(StatesGroup):
     confirm = State()
 
 class AdminForm(StatesGroup):
+    moderation = State()  # Добавляем нужное состояние
     confirm_delete = State()
 
 class AdsViewForm(StatesGroup):

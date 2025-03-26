@@ -13,9 +13,10 @@ from states import AdsViewForm, AdAddForm
 ads_router = Router()
 
 
-# Показывает города для выбранной категории
+# Обработчик выбора категории для показа городов с дополнительными кнопками
 @ads_router.callback_query(F.data.startswith("category:"), StateFilter(AdsViewForm.select_category))
 async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
+    logger.debug(f"Хэндлер show_cities_by_category вызван: data={call.data}, state={await state.get_state()}")
     category = call.data.split(":", 1)[1]
     telegram_id = str(call.from_user.id)
     logger.info(f"Пользователь {telegram_id} выбрал категорию '{category}' для просмотра объявлений")
@@ -30,15 +31,23 @@ async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
         await call.answer()
         return
 
-    buttons = InlineKeyboardMarkup(inline_keyboard=[
+    # Формируем список городов с их количеством
+    city_list = [(city, count) for city, count in cities.items()]
+    # Группируем кнопки по 3 в строке
+    buttons = [city_list[i:i + 3] for i in range(0, len(city_list), 3)]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text=f"{city} ({count})",
             callback_data=f"city_select:{category}:{city}"
-        )] for city, count in cities.items()
-    ])
+        ) for city, count in row] for row in buttons
+    ] + [[  # Добавляем нижнюю строку с тремя кнопками
+        InlineKeyboardButton(text="Помощь", callback_data="action:help"),
+        InlineKeyboardButton(text="Добавить своё", callback_data="action:add"),
+        InlineKeyboardButton(text="Назад", callback_data="action:back")
+    ]])
     await call.message.edit_text(
         "Выберите город для просмотра объявлений:",
-        reply_markup=buttons
+        reply_markup=keyboard
     )
     await state.update_data(category=category)
     await state.set_state(AdsViewForm.select_city)

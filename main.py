@@ -1,3 +1,4 @@
+# Middleware для логирования всех входящих callback-запросов
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
@@ -7,11 +8,17 @@ from handlers.menu_handler import menu_router
 from handlers.ad_handler import ad_router
 from handlers.admin_handler import admin_router
 from handlers.ads_handler import ads_router
-from tools.middlewares import NetworkErrorMiddleware  # Импорт из tools
+from tools.middlewares import NetworkErrorMiddleware
 import asyncio
 from loguru import logger
 
-logger.add("logs/bot.log", rotation="10MB", compression="zip", level="INFO")
+logger.add("logs/bot.log", rotation="10MB", compression="zip", level="DEBUG")
+
+# Middleware для перехвата и логирования callback-запросов
+async def log_callback_middleware(handler, update, data):
+    if update.callback_query:
+        logger.debug(f"Получен callback: data={update.callback_query.data}, from_id={update.callback_query.from_user.id}")
+    return await handler(update, data)
 
 async def main():
     logger.info("Запуск бота Froggle...")
@@ -25,7 +32,8 @@ async def main():
     dp.include_router(menu_router)
     dp.include_router(ad_router)
     dp.include_router(admin_router)
-    dp.update.middleware(NetworkErrorMiddleware())  # Регистрация middleware
+    # dp.update.middleware(NetworkErrorMiddleware())
+    dp.update.middleware(log_callback_middleware)  # Добавляем middleware для callback'ов
     logger.info("Бот успешно настроен, начинаем polling...")
     try:
         await dp.start_polling(bot, skip_updates=True)
