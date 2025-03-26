@@ -1,0 +1,21 @@
+# Python-specific ignores
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# PyCharm project files
+.idea/
+
+# Config files
+config.py
+
+# Other common ignores
+*.log
+*.pot
+*.pyc
+.DS_Store

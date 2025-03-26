@@ -1,0 +1,37 @@
+2025-03-23 17:02:12.514 | INFO     | __main__:main:132 - Запуск тестового бота...
+2025-03-23 17:02:19.711 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=0, media_message_id=None, media_group_id=None
+2025-03-23 17:02:19.840 | DEBUG    | __main__:process_media:95 - Создано сообщение: message_id=981, text='Загружено 1 файл'
+2025-03-23 17:02:31.550 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=1, media_message_id=981, media_group_id=13941879619793986
+2025-03-23 17:02:31.550 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941879619793986, files=['AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ']
+2025-03-23 17:02:31.551 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=2, media_message_id=981, media_group_id=13941879619793986
+2025-03-23 17:02:31.552 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941879619793986, files=['AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDMWff7lG51EsuvtCs2IrY-5lhfIkdAALg7TEb1pQAAUsLHaJv_pN6xQEAAwIAA20AAzYE']
+2025-03-23 17:02:31.553 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=3, media_message_id=981, media_group_id=13941879619793986
+2025-03-23 17:02:31.553 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941879619793986, files=['AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDMWff7lG51EsuvtCs2IrY-5lhfIkdAALg7TEb1pQAAUsLHaJv_pN6xQEAAwIAA20AAzYE', 'AgACAgIAAxkBAAIDGmff647DBphgo9vDG73wZcaKR6yMAALU7TEb1pQAAUtTTMIcyIxR7gEAAwIAA20AAzYE']
+2025-03-23 17:02:32.733 | DEBUG    | __main__:process_media:77 - Отредактировано сообщение: message_id=981, text='Загружено 4 файлов'
+2025-03-23 17:03:03.296 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=0, media_message_id=981, media_group_id=13941879873951986
+2025-03-23 17:03:03.296 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941879873951986, files=['AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ']
+2025-03-23 17:03:03.296 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=1, media_message_id=981, media_group_id=13941879873951986
+2025-03-23 17:03:03.296 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941879873951986, files=['AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDGmff647DBphgo9vDG73wZcaKR6yMAALU7TEb1pQAAUtTTMIcyIxR7gEAAwIAA20AAzYE']
+2025-03-23 17:03:04.453 | DEBUG    | __main__:process_media:77 - Отредактировано сообщение: message_id=981, text='Загружено 2 файлов'
+2025-03-23 17:03:18.323 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=0, media_message_id=981, media_group_id=None
+2025-03-23 17:03:18.520 | DEBUG    | __main__:process_media:103 - Отредактировано сообщение: message_id=981, text='Загружено 1 файл'
+2025-03-23 17:03:43.063 | INFO     | __main__:main:132 - Запуск тестового бота...
+2025-03-23 17:03:50.291 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=0, media_message_id=None, media_group_id=13941880249949514
+2025-03-23 17:03:50.292 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941880249949514, files=['AgACAgIAAxkBAAIDGmff647DBphgo9vDG73wZcaKR6yMAALU7TEb1pQAAUtTTMIcyIxR7gEAAwIAA20AAzYE']
+2025-03-23 17:03:50.293 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=1, media_message_id=None, media_group_id=13941880249949514
+2025-03-23 17:03:50.293 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941880249949514, files=['AgACAgIAAxkBAAIDGmff647DBphgo9vDG73wZcaKR6yMAALU7TEb1pQAAUtTTMIcyIxR7gEAAwIAA20AAzYE', 'AgACAgIAAxkBAAIDG2ff6459pDJlXndfHnK4-v4y47nAAALT7TEb1pQAAUucAuPJBW9-QgEAAwIAA20AAzYE']
+2025-03-23 17:03:51.567 | DEBUG    | __main__:process_media:69 - Создано сообщение: message_id=996, text='Загружено 2 файлов'
+2025-03-23 17:04:07.495 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=0, media_message_id=996, media_group_id=None
+2025-03-23 17:04:07.736 | DEBUG    | __main__:process_media:103 - Отредактировано сообщение: message_id=996, text='Загружено 1 файл'
+2025-03-23 17:04:22.812 | INFO     | __main__:main:132 - Запуск тестового бота...
+2025-03-23 17:04:32.364 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=0, media_message_id=None, media_group_id=13941880586163682
+2025-03-23 17:04:32.365 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941880586163682, files=['AgACAgIAAxkBAAIDQWff8nZ1GfAoGcp4auDhY-Ylcn_zAAKC7TEbqnoBS8vISyAjVsBTAQADAgADeQADNgQ']
+2025-03-23 17:04:32.366 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=1, media_message_id=None, media_group_id=13941880586163682
+2025-03-23 17:04:32.366 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941880586163682, files=['AgACAgIAAxkBAAIDQWff8nZ1GfAoGcp4auDhY-Ylcn_zAAKC7TEbqnoBS8vISyAjVsBTAQADAgADeQADNgQ', 'AgACAgIAAxkBAAIDQmff8nYsLfM7KwPJOu0dpNqXv8HdAAKB7TEbqnoBSyQQ6bQU8GAdAQADAgADbQADNgQ']
+2025-03-23 17:04:32.366 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=2, media_message_id=None, media_group_id=13941880586163682
+2025-03-23 17:04:32.366 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941880586163682, files=['AgACAgIAAxkBAAIDQWff8nZ1GfAoGcp4auDhY-Ylcn_zAAKC7TEbqnoBS8vISyAjVsBTAQADAgADeQADNgQ', 'AgACAgIAAxkBAAIDQmff8nYsLfM7KwPJOu0dpNqXv8HdAAKB7TEbqnoBSyQQ6bQU8GAdAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ']
+2025-03-23 17:04:32.367 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=3, media_message_id=None, media_group_id=13941880586163682
+2025-03-23 17:04:32.367 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941880586163682, files=['AgACAgIAAxkBAAIDQWff8nZ1GfAoGcp4auDhY-Ylcn_zAAKC7TEbqnoBS8vISyAjVsBTAQADAgADeQADNgQ', 'AgACAgIAAxkBAAIDQmff8nYsLfM7KwPJOu0dpNqXv8HdAAKB7TEbqnoBSyQQ6bQU8GAdAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDGmff647DBphgo9vDG73wZcaKR6yMAALU7TEb1pQAAUtTTMIcyIxR7gEAAwIAA20AAzYE']
+2025-03-23 17:04:32.367 | DEBUG    | __main__:process_media:41 - Начало обработки: file_count=4, media_message_id=None, media_group_id=13941880586163682
+2025-03-23 17:04:32.368 | DEBUG    | __main__:process_media:51 - Добавлен файл в группу: 13941880586163682, files=['AgACAgIAAxkBAAIDQWff8nZ1GfAoGcp4auDhY-Ylcn_zAAKC7TEbqnoBS8vISyAjVsBTAQADAgADeQADNgQ', 'AgACAgIAAxkBAAIDQmff8nYsLfM7KwPJOu0dpNqXv8HdAAKB7TEbqnoBSyQQ6bQU8GAdAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDYmff9P5QmeTmqY3BY70gZqf7CiodAAKU7TEbqnoBS7O30c_-jnMZAQADAgADbQADNgQ', 'AgACAgIAAxkBAAIDGmff647DBphgo9vDG73wZcaKR6yMAALU7TEb1pQAAUtTTMIcyIxR7gEAAwIAA20AAzYE', 'AgACAgIAAxkBAAIDG2ff6459pDJlXndfHnK4-v4y47nAAALT7TEb1pQAAUucAuPJBW9-QgEAAwIAA20AAzYE']
+2025-03-23 17:04:33.571 | DEBUG    | __main__:process_media:69 - Создано сообщение: message_id=1007, text='Загружено 5 файлов'
