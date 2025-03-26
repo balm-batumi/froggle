@@ -19,4 +19,5 @@ class AdminForm(StatesGroup):
 class AdsViewForm(StatesGroup):
     select_category = State()
     select_city = State()
+    select_tags = State()
 

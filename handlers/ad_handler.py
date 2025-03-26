@@ -221,39 +221,47 @@ async def process_ad_price_skip(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdAddForm.media)
     await call.answer()
 
-# Загрузка медиа
+
+# Обрабатывает загрузку медиа и сохраняет их с типом в формате JSONB
 @ad_router.message(F.photo | F.video, StateFilter(AdAddForm.media))
 async def process_ad_media(message: types.Message, state: FSMContext):
     if message.from_user.is_bot:
         logger.debug(f"Сообщение от бота {message.from_user.id} проигнорировано")
         return
 
-    file_id = message.photo[-1].file_id if message.photo else message.video.file_id if message.video else None
-    if not file_id:
+    # Определяем тип медиа и file_id
+    if message.photo:
+        file_id = message.photo[-1].file_id
+        media_type = "photo"
+    elif message.video:
+        file_id = message.video.file_id
+        media_type = "video"
+    else:
         logger.debug(f"Нет file_id в сообщении от {message.from_user.id}")
         return
 
     media_group_id = message.media_group_id
     data = await state.get_data()
     category = data.get("category")
-    media_file_ids = data.get("media_file_ids", []) or []  # Убеждаемся, что это всегда список
+    media_file_ids = data.get("media_file_ids", []) or []  # Убеждаемся, что это список
     media_message_id = data.get("media_message_id")
     media_groups = data.get("media_groups", {})
     last_group_time = data.get("last_group_time", 0)
     current_time = asyncio.get_event_loop().time()
     logger.debug(f"Начало обработки медиа: file_id={file_id}, media_group_id={media_group_id}, текущие файлы={media_file_ids}")
 
-    if file_id not in media_file_ids:
-        media_file_ids.append(file_id)
+    # Проверяем, добавлен ли этот file_id ранее
+    if not any(media["id"] == file_id for media in media_file_ids):
+        media_file_ids.append({"id": file_id, "type": media_type})
         if media_group_id:
             # Накопление файлов группы
             group_files = media_groups.get(media_group_id, [])
-            group_files.append(file_id)
+            group_files.append({"id": file_id, "type": media_type})
             media_groups[media_group_id] = group_files
             await state.update_data(media_file_ids=media_file_ids[:10], media_groups=media_groups, last_group_time=current_time)
             logger.debug(f"Добавлен файл в группу: {media_group_id}, files={group_files}")
 
-            # Ждём 1 секунду после последнего файла группы
+            # Ждем 1 секунду после последнего файла группы
             await asyncio.sleep(1)
             data = await state.get_data()
             if data.get("last_group_time") == current_time:  # Это последний файл группы
@@ -297,7 +305,9 @@ async def process_ad_media(message: types.Message, state: FSMContext):
             except Exception as e:
                 logger.error(f"Ошибка при обработке одиночного медиа для telegram_id={message.from_user.id}: {e}")
                 await message.answer("Ошибка при загрузке файла. Попробуйте снова.")
+            logger.debug(f"Переход к состоянию AdAddForm.contacts для telegram_id={message.from_user.id}")
             await state.set_state(AdAddForm.contacts)
+            logger.debug(f"Состояние изменено, вызов _send_contact_options для telegram_id={message.from_user.id}")
             await _send_contact_options(message, state)
 
 # Пропуск загрузки медиа
@@ -318,6 +328,7 @@ async def process_ad_skip(call: types.CallbackQuery, state: FSMContext):
         await _send_contact_options(call, state)
     await call.answer()
 
+# Отправляет варианты выбора контактов для объявления
 async def _send_contact_options(message_or_call, state: FSMContext):
     if isinstance(message_or_call, types.Message):
         telegram_id = str(message_or_call.from_user.id)
@@ -353,6 +364,8 @@ async def _send_contact_options(message_or_call, state: FSMContext):
         buttons.append([InlineKeyboardButton(text=f"ввести юзернейм: @{username}", callback_data="contact:username")])
     if saved_contact:
         buttons.append([InlineKeyboardButton(text=f"контакт из БД: {saved_contact}", callback_data="contact:saved")])
+    if not username and not saved_contact:
+        buttons.append([InlineKeyboardButton(text="Ввести вручную", callback_data="contact:manual")])
     buttons.append([InlineKeyboardButton(text="Помощь", callback_data=f"help:{data.get('category', 'unknown')}:contacts"),
                     InlineKeyboardButton(text="Назад", callback_data="back")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)

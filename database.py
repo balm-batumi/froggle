@@ -1,7 +1,11 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, ARRAY, select
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, ARRAY, select, Enum
 from sqlalchemy.sql import func
+# from sqlalchemy.dialects.postgresql import JSONB
+# from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+
 from loguru import logger
 from config import DATABASE_URL
 
@@ -41,11 +45,16 @@ class Advertisement(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     category = Column(String)
     city = Column(String, nullable=True)
+
     tags = Column(ARRAY(String), nullable=True)
+    # tags = Column(ARRAY(sqlalchemy.String), nullable=True)
+    # tags = Column(postgresql.ARRAY(sqlalchemy.String), nullable=True)
+    # # tags = Column(postgresql.ARRAY(sa.String), nullable=True)
+
     title_ru = Column(String)
     description_ru = Column(String)
     price = Column(String(30), nullable=True)
-    media_file_ids = Column(ARRAY(String), nullable=True)
+    media_file_ids = Column(ARRAY(JSONB), nullable=True)
     contact_info = Column(String, nullable=True)
     status = Column(String, default="pending")
     created_at = Column(DateTime, default=func.now())
@@ -63,6 +72,12 @@ class City(Base):
     __tablename__ = "cities"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
+
+class ViewedAds(Base):
+    __tablename__ = "viewed_ads"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    advertisement_id = Column(Integer, ForeignKey("advertisements.id"), nullable=False)
 
 class Favorite(Base):
     __tablename__ = "favorites"
@@ -109,6 +124,17 @@ async def is_favorite(user_id: int, advertisement_id: int) -> bool:
         return result.scalar_one_or_none() is not None
 
 
+# Отмечает объявление как просмотренное для пользователя
+async def mark_ad_as_viewed(telegram_id: str, advertisement_id: int) -> None:
+    async with AsyncSessionLocal() as session:
+        # Получаем user_id по telegram_id
+        result = await session.execute(select(User.id).where(User.telegram_id == telegram_id))
+        user_id = result.scalar_one_or_none()
+        if user_id:
+            viewed = ViewedAds(user_id=user_id, advertisement_id=advertisement_id)
+            session.add(viewed)
+            await session.commit()
+
 
 # Функция добавления объявления в базу данных с учетом цены
 async def add_advertisement(user_id: int, category: str, city: str, title_ru: str, description_ru: str, tags: list[str], media_file_ids: list[str], contact_info: str, price: str = None) -> int:
@@ -130,12 +156,17 @@ async def add_advertisement(user_id: int, category: str, city: str, title_ru: st
         return ad.id
 
 
-# Функция получения тегов для категории
-async def get_category_tags(category: str):
-    async for session in get_db():
-        result = await session.execute(select(Tag).where(Tag.category == category))
-        tags = result.scalars().all()
-        return [(tag.id, tag.name) for tag in tags]
+# Возвращает теги, присутствующие в объявлениях категории и города
+async def get_category_tags(category: str, city: str) -> list[tuple[int, str]]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Tag.id, Tag.name)
+            .join(Advertisement, Advertisement.tags.contains(Tag.name))
+            .where(Advertisement.category == category, Advertisement.city == city, Advertisement.status == "approved")
+            .distinct()
+            .order_by(Tag.name)
+        )
+        return result.all()
 
 # Функция получения списка городов
 async def get_cities():

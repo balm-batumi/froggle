@@ -7,6 +7,7 @@ from handlers.menu_handler import menu_router
 from handlers.ad_handler import ad_router
 from handlers.admin_handler import admin_router
 from handlers.ads_handler import ads_router
+from tools.middlewares import NetworkErrorMiddleware  # Импорт из tools
 import asyncio
 from loguru import logger
 
@@ -20,10 +21,11 @@ async def main():
         default=DefaultBotProperties(parse_mode='HTML')
     )
     dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(ads_router)  # Сначала ads_router для категорий
-    dp.include_router(menu_router)  # Потом menu_router для базовых команд
+    dp.include_router(ads_router)
+    dp.include_router(menu_router)
     dp.include_router(ad_router)
     dp.include_router(admin_router)
+    dp.update.middleware(NetworkErrorMiddleware())  # Регистрация middleware
     logger.info("Бот успешно настроен, начинаем polling...")
     try:
         await dp.start_polling(bot, skip_updates=True)

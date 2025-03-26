@@ -6,6 +6,7 @@ from states import MenuState, AdAddForm
 from database import get_db, User, select, Favorite, Advertisement, remove_from_favorites
 from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
+from tools.utils import render_ad
 from loguru import logger
 
 menu_router = Router()
@@ -78,7 +79,7 @@ async def settings_handler(call: types.CallbackQuery):
             await call.message.edit_text("Ваши настройки:", reply_markup=keyboard)
     await call.answer()
 
-# Показать объявления пользователя
+# Показывает список объявлений пользователя с кнопками управления
 @menu_router.callback_query(lambda call: call.data == "show_my_ads")
 async def show_my_ads_handler(call: types.CallbackQuery):
     telegram_id = str(call.from_user.id)
@@ -107,67 +108,19 @@ async def show_my_ads_handler(call: types.CallbackQuery):
         )
 
         for ad in ads:
-            title = ad.title_ru if ad.title_ru else "Без названия"
-            description = ad.description_ru if ad.description_ru else "Без описания"
-            contact_info = ad.contact_info if ad.contact_info else "Не указаны"
-            display_name = CATEGORIES[ad.category]["display_name"]
-            text = (
-                f"<b>{display_name} в {ad.city}</b>\n"
-                f"📌 {', '.join(ad.tags) if ad.tags else 'Нет тегов'}\n"
-                f"{title}\n"
-                f"{description[:1000] + '...' if len(description) > 1000 else description}\n"
-                f"контакты: {contact_info}\n"
-                f"Статус: {ad.status}"
-            )
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="Удалить", callback_data=f"delete_ad:{ad.id}")]
-            ])
+            buttons = [InlineKeyboardButton(text="Удалить", callback_data=f"delete_ad:{ad.id}")]
+            await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
 
-            await call.message.bot.send_message(
-                chat_id=call.from_user.id,
-                text=f"•••••     Объявление #{ad.id}:     •••••"
-            )
-
-            if ad.media_file_ids and len(ad.media_file_ids) > 0:
-                photo_group = []
-                video_group = []
-                for file_id in ad.media_file_ids[:10]:
-                    try:
-                        file_info = await call.message.bot.get_file(file_id)
-                        file_path = file_info.file_path.lower()
-                        if file_path.endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                            photo_group.append(types.InputMediaPhoto(media=file_id))
-                        elif file_path.endswith(('.mp4', '.mov', '.avi')):
-                            video_group.append(types.InputMediaVideo(media=file_id))
-                        else:
-                            logger.warning(f"Неизвестный тип файла для file_id {file_id}: {file_path}")
-                    except Exception as e:
-                        logger.error(f"Ошибка при получении file_id {file_id} для объявления ID {ad.id}: {e}")
-
-                if photo_group:
-                    if len(photo_group) == 1:
-                        await call.message.bot.send_photo(
-                            chat_id=call.from_user.id,
-                            photo=photo_group[0].media
-                        )
-                    else:
-                        await call.message.bot.send_media_group(chat_id=call.from_user.id, media=photo_group)
-                if video_group:
-                    if len(video_group) == 1:
-                        await call.message.bot.send_video(
-                            chat_id=call.from_user.id,
-                            video=video_group[0].media
-                        )
-                    else:
-                        await call.message.bot.send_media_group(chat_id=call.from_user.id, media=video_group)
-
-            await call.message.bot.send_message(chat_id=call.from_user.id, text=text, reply_markup=keyboard)
-
-        back_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Назад", callback_data="action:settings")]
-        ])
-        await call.message.bot.send_message(chat_id=call.from_user.id, text="Вернуться в настройки:", reply_markup=back_keyboard)
-    await call.answer()
+        # Добавляем кнопки "Назад" и "Помощь" с текстом "Просмотр своих объявлений"
+        back_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="Помощь", callback_data="action:help"),
+            InlineKeyboardButton(text="Назад", callback_data="action:settings")
+        ]])
+        await call.message.bot.send_message(
+            chat_id=call.from_user.id,
+            text="Просмотр своих объявлений",
+            reply_markup=back_keyboard
+        )
 
 
 # Удаление объявления
@@ -257,68 +210,11 @@ async def show_favorites_handler(call: types.CallbackQuery):
             )
             ad = ad_result.scalar_one_or_none()
             if ad:
-                title = ad.title_ru if ad.title_ru else "Без названия"
-                description = ad.description_ru if ad.description_ru else "Без описания"
-                contact_info = ad.contact_info if ad.contact_info else "Не указаны"
-                status_text = "Удалено автором" if ad.status == "deleted" else ""
-                display_name = CATEGORIES[ad.category]["display_name"]
-                text = (
-                    f"<b>{display_name} в {ad.city}</b>\n"
-                    f"📌 {', '.join(ad.tags) if ad.tags else 'Нет тегов'}\n"
-                    f"{title}\n"
-                    f"{description[:1000] + '...' if len(description) > 1000 else description}\n"
-                    f"контакты: {contact_info}\n"
-                    f"{status_text}"
-                )
-                remove_button = InlineKeyboardButton(
+                buttons = [InlineKeyboardButton(
                     text="Удалить из избранного",
                     callback_data=f"favorite:remove:{ad.id}"
-                )
-                fav_keyboard = InlineKeyboardMarkup(inline_keyboard=[[remove_button]])
-
-                await call.message.bot.send_message(
-                    chat_id=call.from_user.id,
-                    text=f"•••••     Объявление #{ad.id}:     •••••"
-                )
-
-                if ad.media_file_ids and len(ad.media_file_ids) > 0:
-                    photo_group = []
-                    video_group = []
-                    for file_id in ad.media_file_ids[:10]:
-                        try:
-                            file_info = await call.message.bot.get_file(file_id)
-                            file_path = file_info.file_path.lower()
-                            if file_path.endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                                photo_group.append(types.InputMediaPhoto(media=file_id))
-                            elif file_path.endswith(('.mp4', '.mov', '.avi')):
-                                video_group.append(types.InputMediaVideo(media=file_id))
-                            else:
-                                logger.warning(f"Неизвестный тип файла для file_id {file_id}: {file_path}")
-                        except Exception as e:
-                            logger.error(f"Ошибка при получении file_id {file_id} для объявления ID {ad.id}: {e}")
-
-                    if photo_group:
-                        if len(photo_group) == 1:
-                            await call.message.bot.send_photo(
-                                chat_id=call.from_user.id,
-                                photo=photo_group[0].media
-                            )
-                        else:
-                            await call.message.bot.send_media_group(chat_id=call.from_user.id, media=photo_group)
-                    if video_group:
-                        if len(video_group) == 1:
-                            await call.message.bot.send_video(
-                                chat_id=call.from_user.id,
-                                video=video_group[0].media
-                            )
-                        else:
-                            await call.message.bot.send_media_group(chat_id=call.from_user.id, media=video_group)
-
-                await call.message.bot.send_message(
-                    chat_id=call.from_user.id,
-                    text=text,
-                    reply_markup=fav_keyboard
-                )
+                )]
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
             else:
                 text = f"Объявление больше не доступно"
                 remove_button = InlineKeyboardButton(
