@@ -3427,3 +3427,154 @@ TypeError: log_callback_middleware() takes 2 positional arguments but 3 were giv
 2025-03-26 21:15:11.871 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
 2025-03-26 21:15:11.871 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
 2025-03-26 21:15:29.887 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-26 22:53:43.336 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 22:53:43.343 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 22:53:43.344 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 22:53:46.488 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 22:53:46.492 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 22:53:46.493 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 22:53:46.493 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 22:53:49.527 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city_other:housing, from_id=8162326543
+2025-03-26 22:53:49.532 | INFO     | handlers.ad_handler:process_city_other:111 - Пользователь 8162326543 выбрал 'Другой город' для категории 'housing'
+2025-03-26 22:53:50.593 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Мцхета, from_id=8162326543
+2025-03-26 22:53:50.598 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Мцхета' для telegram_id=8162326543 в категории housing
+2025-03-26 23:19:12.460 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:19:12.465 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:19:12.467 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:19:14.501 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:19:14.502 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:19:14.503 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:19:15.559 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:19:15.562 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:19:15.563 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:19:15.563 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:19:24.943 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Кутаиси, from_id=8162326543
+2025-03-26 23:19:24.947 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Кутаиси' для telegram_id=8162326543 в категории housing
+2025-03-26 23:28:42.447 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-26 23:28:42.595 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-26 23:28:43.153 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-26 23:28:43.999 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:28:44.011 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:28:44.012 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:28:46.137 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:28:46.138 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:28:46.139 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:28:48.099 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:28:48.102 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:28:48.103 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:28:48.103 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:28:49.336 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Тбилиси, from_id=8162326543
+2025-03-26 23:28:49.341 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Тбилиси' для telegram_id=8162326543 в категории housing
+2025-03-26 23:28:56.667 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=tag_select:15, from_id=8162326543
+2025-03-26 23:32:44.443 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-26 23:32:44.596 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-26 23:32:45.143 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-26 23:32:46.062 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:32:46.075 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:32:46.076 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:32:47.715 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:32:47.716 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:32:47.717 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:32:49.750 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:32:49.754 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:32:49.754 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:32:49.755 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:32:51.021 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Кутаиси, from_id=8162326543
+2025-03-26 23:32:51.025 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Кутаиси' для telegram_id=8162326543 в категории housing
+2025-03-26 23:32:53.261 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=tag_select:18, from_id=8162326543
+2025-03-26 23:33:28.204 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-26 23:33:28.461 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-26 23:33:28.983 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-26 23:33:30.260 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:33:30.273 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:33:30.275 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:33:31.713 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:33:31.714 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:33:31.714 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:33:32.671 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:33:32.676 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:33:32.676 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:33:32.677 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:33:33.471 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Тбилиси, from_id=8162326543
+2025-03-26 23:33:33.474 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Тбилиси' для telegram_id=8162326543 в категории housing
+2025-03-26 23:33:35.617 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=tag_select:15, from_id=8162326543
+2025-03-26 23:37:07.376 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:37:07.381 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:37:07.382 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:37:09.797 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:37:09.798 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:37:09.798 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:37:13.089 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:37:13.093 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:37:13.094 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:37:13.094 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:37:17.370 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Батуми, from_id=8162326543
+2025-03-26 23:37:17.373 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Батуми' для telegram_id=8162326543 в категории housing
+2025-03-26 23:37:49.442 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:37:49.445 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:37:49.448 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:37:50.739 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:37:50.740 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:37:50.741 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:37:52.562 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:37:52.566 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:37:52.567 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:37:52.567 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:37:54.959 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Батуми, from_id=8162326543
+2025-03-26 23:37:54.963 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Батуми' для telegram_id=8162326543 в категории housing
+2025-03-26 23:44:54.837 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-26 23:44:54.983 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-26 23:44:55.671 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-26 23:44:56.671 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:44:56.682 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:44:56.683 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:44:58.707 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:44:58.708 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:44:58.709 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:45:01.577 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:45:01.580 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:45:01.581 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:45:01.581 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:45:03.792 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Батуми, from_id=8162326543
+2025-03-26 23:45:03.800 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Батуми' для telegram_id=8162326543 в категории housing
+2025-03-26 23:47:09.440 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-26 23:47:09.615 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-26 23:47:10.173 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-26 23:47:10.695 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:47:10.705 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:47:10.706 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:47:12.239 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:47:12.240 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:47:12.241 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:47:13.557 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:47:13.575 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:47:13.576 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:47:13.576 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:47:14.501 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Батуми, from_id=8162326543
+2025-03-26 23:47:14.505 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Батуми' для telegram_id=8162326543 в категории housing
+2025-03-26 23:53:37.181 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-26 23:53:37.320 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-26 23:53:37.822 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-26 23:53:42.115 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:53:42.128 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:53:42.129 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:53:43.956 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:53:43.957 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:53:43.957 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:53:45.061 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:add, from_id=8162326543
+2025-03-26 23:53:45.065 | INFO     | handlers.ad_handler:process_ad_start_from_callback:48 - process_ad_start_from_callback вызвана для telegram_id=8162326543
+2025-03-26 23:53:45.065 | INFO     | handlers.ad_handler:process_ad_start_from_callback:61 - Начало добавления объявления в категории housing для telegram_id=8162326543
+2025-03-26 23:53:45.066 | INFO     | handlers.ad_handler:process_ad_start_from_callback:64 - Отправка меню городов для категории housing
+2025-03-26 23:53:46.167 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city:housing:Гори, from_id=8162326543
+2025-03-26 23:53:46.171 | INFO     | handlers.ad_handler:process_city_selection:86 - Выбран город 'Гори' для telegram_id=8162326543 в категории housing
+2025-03-26 23:53:48.892 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=back, from_id=8162326543
+2025-03-26 23:54:35.951 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-26 23:54:36.122 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-26 23:54:36.641 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-26 23:54:38.290 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-26 23:54:38.301 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-26 23:54:38.302 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-26 23:54:41.547 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-26 23:54:41.549 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-26 23:54:41.550 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-26 23:54:43.168 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543

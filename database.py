@@ -60,12 +60,14 @@ class Advertisement(Base):
     created_at = Column(DateTime, default=func.now())
 
 
+# Модель Tag с добавленным полем order для задания пользовательского порядка тегов
 class Tag(Base):
     __tablename__ = "tags"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     category = Column(String, nullable=False)
     is_primary = Column(Boolean, default=False)  # Новый столбец для обязательных тегов
+    order = Column(Integer, default=0, nullable=False)  # Поле для задания порядка тегов
 
 # Модель City
 class City(Base):
@@ -169,13 +171,13 @@ async def get_category_tags(category: str, city: str) -> list[tuple[int, str]]:
         return result.all()
 
 
-# Функция для получения всех тегов заданной категории из таблицы tags
+# Функция возвращает все теги заданной категории, отсортированные по полю order
 async def get_all_category_tags(category: str) -> list[tuple[int, str]]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Tag.id, Tag.name)
             .where(Tag.category == category)
-            .order_by(Tag.name)
+            .order_by(Tag.order)  # Сортировка по полю order
         )
         return result.all()
 

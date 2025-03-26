@@ -95,7 +95,8 @@ async def process_city_selection(call: types.CallbackQuery, state: FSMContext):
     buttons = [tags[i:i + 3] for i in range(0, len(tags), 3)]
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
-    ])
+    ] + [[InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:tags"),
+          InlineKeyboardButton(text="Назад", callback_data="back")]])
     await call.message.edit_text(
         CATEGORIES[category]["texts"]["tags"],
         reply_markup=keyboard
@@ -125,7 +126,7 @@ async def process_city_other(call: types.CallbackQuery, state: FSMContext):
     )
     await call.answer()
 
-# Обработчик выбора тега для добавления в список с отображением всех тегов категории
+# Обрабатывает выбор тегов для добавления объявления, проверяя наличие обязательных тегов
 @ad_router.callback_query(F.data.startswith("tag_select:"), StateFilter(AdAddForm.tags))
 async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
     tag_id = int(call.data.split(":", 1)[1])
@@ -166,7 +167,7 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
             )
         else:
             await call.message.edit_text(
-                f"Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег.",
+                f"Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из:\nсдаю, продаю, сниму, куплю.",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
             )
         await call.answer()
@@ -554,7 +555,7 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
 # Обработчик "Назад"
 @ad_router.callback_query(F.data == "back", StateFilter(AdAddForm))
 async def process_ad_back(call: types.CallbackQuery, state: FSMContext):
-    await call.message.edit_text("Возврат в главное меню.\n:", reply_markup=get_main_menu_keyboard())
+    await call.message.edit_text("Возврат в главное меню", reply_markup=get_main_menu_keyboard())
     await state.clear()
     await call.answer()
 
