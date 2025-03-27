@@ -459,7 +459,7 @@ async def process_confirm_contact(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     selected_contact = data.get("selected_contact", "")
     if not selected_contact:
-        await call.message.edit_text("Ошибка: контакт не выбран. Попробуйте снова.\n:", reply_markup=get_main_menu_keyboard())
+        await call.message.edit_text("Ошибка: контакт не выбран. Попробуйте снова", reply_markup=get_main_menu_keyboard())
         await state.clear()
         return
     await state.update_data(contacts=selected_contact)
@@ -527,7 +527,7 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
             result = await session.execute(stmt)
             user_id = result.scalar_one_or_none()
             if not user_id:
-                await call.message.edit_text("Пользователь не найден. Используйте /start.\n:", reply_markup=get_main_menu_keyboard())
+                await call.message.edit_text("Пользователь не найден. Используйте /start", reply_markup=get_main_menu_keyboard())
                 await state.clear()
                 return
             ad_id = await add_advertisement(
@@ -543,7 +543,7 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
             )
             logger.info(f"Объявление #{ad_id} добавлено для telegram_id={telegram_id}")
         await call.message.edit_text(
-            f"Объявление сохранено и отправлено на модерацию\n:", reply_markup=get_main_menu_keyboard()
+            f"Объявление сохранено и отправлено на модерацию", reply_markup=get_main_menu_keyboard()
         )
     elif action == "cancel":
         await call.message.edit_text(

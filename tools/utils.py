@@ -28,6 +28,8 @@ async def render_ad(ad: Advertisement, bot: Bot, chat_id: int, show_status: bool
     if status_text:
         text += f"\n{status_text}"
 
+    # Отладка: проверяем, что приходит в buttons
+    logger.debug(f"Buttons перед созданием клавиатуры: {buttons}")
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
     await bot.send_message(

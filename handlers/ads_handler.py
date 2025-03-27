@@ -60,9 +60,10 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
     _, category, city = call.data.split(":", 2)
     telegram_id = str(call.from_user.id)
     logger.info(f"Пользователь {telegram_id} выбрал город '{city}' в категории '{category}'")
-
     await state.update_data(category=category, city=city)
+    logger.debug(f"Начало получения тегов для category='{category}', city='{city}'")
     tags = await get_category_tags(category, city)
+    logger.debug(f"Получены теги: {tags}")
     if not tags:
         logger.debug(f"Нет тегов для категории '{category}' в городе '{city}'")
         await call.message.edit_text(
@@ -79,7 +80,7 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
     ])
     keyboard.inline_keyboard.append([
         InlineKeyboardButton(text="Только новые", callback_data="only_new"),
-        InlineKeyboardButton(text="Пропустить", callback_data="skip")
+        InlineKeyboardButton(text="Найти", callback_data="skip")
     ])
     await call.message.edit_text(
         f"Выберите теги для фильтрации в {city}:",
@@ -116,10 +117,13 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
         ])
         keyboard.inline_keyboard.append([
             InlineKeyboardButton(text="Только новые" if not only_new else "Все объявления", callback_data="only_new"),
-            InlineKeyboardButton(text="Пропустить", callback_data="skip")
+            InlineKeyboardButton(text="Найти", callback_data="skip")
         ])
+        selected_filters = tags.copy()
+        if only_new:
+            selected_filters.append("Только новые")
         await call.message.edit_text(
-            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(tags) if tags else 'ничего'}):",
+            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}):",
             reply_markup=keyboard
         )
         return
@@ -134,10 +138,13 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
         ])
         keyboard.inline_keyboard.append([
             InlineKeyboardButton(text="Только новые" if not only_new else "Все объявления", callback_data="only_new"),
-            InlineKeyboardButton(text="Пропустить", callback_data="skip")
+            InlineKeyboardButton(text="Найти", callback_data="skip")
         ])
+        selected_filters = tags.copy()
+        if only_new:
+            selected_filters.append("Только новые")
         await call.message.edit_text(
-            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(tags) if tags else 'ничего'}):",
+            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}):",
             reply_markup=keyboard
         )
         await call.answer(f"Фильтр 'Только новые': {'вкл' if only_new else 'выкл'}")
@@ -150,8 +157,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
             user_id = result.scalar_one_or_none()
             if not user_id:
                 await call.message.edit_text(
-                    "Ошибка: пользователь не найден.\n:",
-                    reply_markup=get_main_menu_keyboard()
+                    "Ошибка: пользователь не найден.\n:", reply_markup=get_main_menu_keyboard()
                 )
                 await state.clear()
                 await call.answer()
@@ -172,11 +178,21 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
             ads = ads.scalars().all()
 
             if not ads:
+                # Сбрасываем фильтры и остаёмся в состоянии выбора тегов
+                await state.update_data(tags=[], only_new=False)
+                tags_list = await get_category_tags(category, city)
+                buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text=name, callback_data=f"tag:{id}") for id, name in row] for row in buttons
+                ])
+                keyboard.inline_keyboard.append([
+                    InlineKeyboardButton(text="Только новые", callback_data="only_new"),
+                    InlineKeyboardButton(text="Найти", callback_data="skip")
+                ])
                 await call.message.edit_text(
-                    f"Объявлений в {city} по вашим фильтрам не найдено.\n:",
-                    reply_markup=get_main_menu_keyboard()
+                    f"Объявлений в {city} по вашим фильтрам не найдено. Попробуйте другие фильтры:",
+                    reply_markup=keyboard
                 )
-                await state.clear()
                 await call.answer()
                 return
 
@@ -186,10 +202,10 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                 text=f"Найдено {len(ads)} объявлений\n" + "―" * 27
             )
             for ad in ads:
-                buttons = [InlineKeyboardButton(
+                buttons = [[InlineKeyboardButton(
                     text="В избранное",
                     callback_data=f"favorite:add:{ad.id}"
-                )]
+                )]]
                 await render_ad(ad, call.message.bot, call.from_user.id, show_status=False, buttons=buttons)
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[[
