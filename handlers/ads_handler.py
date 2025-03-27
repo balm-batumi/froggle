@@ -13,7 +13,7 @@ from states import AdsViewForm, AdAddForm
 ads_router = Router()
 
 
-# Обработчик выбора категории для показа городов с дополнительными кнопками
+# Обработчик выбора категории для показа городов или сообщения об отсутствии объявлений
 @ads_router.callback_query(F.data.startswith("category:"), StateFilter(AdsViewForm.select_category))
 async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
     logger.debug(f"Хэндлер show_cities_by_category вызван: data={call.data}, state={await state.get_state()}")
@@ -23,24 +23,29 @@ async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
     cities = await get_cities(category)
     if not cities:
         display_name = CATEGORIES[category]["display_name"]
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Помощь", callback_data="action:help"),
+                InlineKeyboardButton(text="Добавить своё", callback_data="action:add"),
+                InlineKeyboardButton(text="Назад", callback_data="action:back")
+            ]
+        ])
+        await state.update_data(category=category)
         await call.message.edit_text(
-            f"В категории '{display_name}' нет одобренных объявлений.\n:",
-            reply_markup=get_main_menu_keyboard()
+            f"В категории '{display_name}' нет одобренных объявлений",
+            reply_markup=keyboard
         )
-        await state.clear()
         await call.answer()
         return
 
-    # Формируем список городов с их количеством
     city_list = [(city, count) for city, count in cities.items()]
-    # Группируем кнопки по 3 в строке
     buttons = [city_list[i:i + 3] for i in range(0, len(city_list), 3)]
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text=f"{city} ({count})",
             callback_data=f"city_select:{category}:{city}"
         ) for city, count in row] for row in buttons
-    ] + [[  # Добавляем нижнюю строку с тремя кнопками
+    ] + [[
         InlineKeyboardButton(text="Помощь", callback_data="action:help"),
         InlineKeyboardButton(text="Добавить своё", callback_data="action:add"),
         InlineKeyboardButton(text="Назад", callback_data="action:back")
@@ -152,12 +157,12 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
 
     elif callback_data == "skip":
         async for session in get_db():
-            # Получаем user_id по telegram_id
             result = await session.execute(select(User.id).where(User.telegram_id == telegram_id))
             user_id = result.scalar_one_or_none()
             if not user_id:
                 await call.message.edit_text(
-                    "Ошибка: пользователь не найден.\n:", reply_markup=get_main_menu_keyboard()
+                    "Ошибка: пользователь не найден.\n:",
+                    reply_markup=get_main_menu_keyboard()
                 )
                 await state.clear()
                 await call.answer()
@@ -178,7 +183,6 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
             ads = ads.scalars().all()
 
             if not ads:
-                # Сбрасываем фильтры и остаёмся в состоянии выбора тегов
                 await state.update_data(tags=[], only_new=False)
                 tags_list = await get_category_tags(category, city)
                 buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]
@@ -213,11 +217,11 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                 InlineKeyboardButton(text="Добавить своё", callback_data="action:add"),
                 InlineKeyboardButton(text="Назад", callback_data="action:back")
             ]])
+            await state.update_data(category=category)
             await call.message.bot.send_message(
                 chat_id=call.from_user.id,
                 text="Режим просмотра объявлений",
                 reply_markup=keyboard
             )
             logger.debug(f"Отправлено финальное меню")
-        await state.clear()
-        await call.answer()
+            await call.answer()

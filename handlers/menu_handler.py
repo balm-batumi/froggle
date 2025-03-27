@@ -1,4 +1,4 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -45,14 +45,14 @@ async def start_handler(message: types.Message, state: FSMContext):
         else:
             logger.debug(f"Пользователь с telegram_id={telegram_id} уже существует")
 
-    await state.set_state(AdsViewForm.select_category)  # Устанавливаем состояние для выбора категории
+    await state.set_state(AdsViewForm.select_category)
     logger.debug(f"Отправляем главное меню с клавиатурой: {get_main_menu_keyboard().__class__.__name__}")
     await message.answer(
         "Добро пожаловать в Froggle! Выберите категорию:",
         reply_markup=get_main_menu_keyboard()
     )
 
-@menu_router.callback_query(lambda call: call.data == "action:help")
+@menu_router.callback_query(F.data == "action:help")
 async def help_handler(call: types.CallbackQuery):
     await call.message.edit_text(
         "Froggle — ваш помощник. Выберите категорию для просмотра объявлений.",
@@ -60,8 +60,7 @@ async def help_handler(call: types.CallbackQuery):
     )
     await call.answer()
 
-# Настройки
-@menu_router.callback_query(lambda call: call.data == "action:settings")
+@menu_router.callback_query(F.data == "action:settings")
 async def settings_handler(call: types.CallbackQuery):
     telegram_id = str(call.from_user.id)
     async for session in get_db():
@@ -84,8 +83,7 @@ async def settings_handler(call: types.CallbackQuery):
             await call.message.edit_text("Ваши настройки:", reply_markup=keyboard)
     await call.answer()
 
-# Показывает список объявлений пользователя с кнопками управления
-@menu_router.callback_query(lambda call: call.data == "show_my_ads")
+@menu_router.callback_query(F.data == "show_my_ads")
 async def show_my_ads_handler(call: types.CallbackQuery):
     telegram_id = str(call.from_user.id)
     async for session in get_db():
@@ -113,10 +111,9 @@ async def show_my_ads_handler(call: types.CallbackQuery):
         )
 
         for ad in ads:
-            buttons = [InlineKeyboardButton(text="Удалить", callback_data=f"delete_ad:{ad.id}")]
+            buttons = [[InlineKeyboardButton(text="Удалить", callback_data=f"delete_ad:{ad.id}")]]
             await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
 
-        # Добавляем кнопки "Назад" и "Помощь" с текстом "Просмотр своих объявлений"
         back_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="Помощь", callback_data="action:help"),
             InlineKeyboardButton(text="Назад", callback_data="action:settings")
@@ -127,9 +124,7 @@ async def show_my_ads_handler(call: types.CallbackQuery):
             reply_markup=back_keyboard
         )
 
-
-# Удаление объявления
-@menu_router.callback_query(lambda call: call.data.startswith("delete_ad:"))
+@menu_router.callback_query(F.data.startswith("delete_ad:"))
 async def delete_ad_handler(call: types.CallbackQuery):
     telegram_id = str(call.from_user.id)
     ad_id = int(call.data.split(":")[1])
@@ -180,8 +175,7 @@ async def delete_ad_handler(call: types.CallbackQuery):
                 reply_markup=keyboard
             )
 
-# Показать избранное
-@menu_router.callback_query(lambda call: call.data == "show_favorites")
+@menu_router.callback_query(F.data == "show_favorites")
 async def show_favorites_handler(call: types.CallbackQuery):
     telegram_id = str(call.from_user.id)
     async for session in get_db():
@@ -199,7 +193,8 @@ async def show_favorites_handler(call: types.CallbackQuery):
         if not favorites:
             await call.message.bot.send_message(
                 chat_id=call.from_user.id,
-                text="У вас нет избранных объявлений", reply_markup=get_main_menu_keyboard()
+                text="У вас нет избранных объявлений",
+                reply_markup=get_main_menu_keyboard()
             )
             return
 
@@ -215,7 +210,7 @@ async def show_favorites_handler(call: types.CallbackQuery):
             )
             ad = ad_result.scalar_one_or_none()
             if ad:
-                buttons = [[InlineKeyboardButton(  # Оборачиваем в список для одной строки
+                buttons = [[InlineKeyboardButton(
                     text="Удалить из избранного",
                     callback_data=f"favorite:remove:{ad.id}"
                 )]]
@@ -247,9 +242,7 @@ async def show_favorites_handler(call: types.CallbackQuery):
         )
     await call.answer()
 
-
-# Удаление из избранного
-@menu_router.callback_query(lambda call: call.data.startswith("favorite:remove:"))
+@menu_router.callback_query(F.data.startswith("favorite:remove:"))
 async def remove_from_favorites_handler(call: types.CallbackQuery):
     telegram_id = str(call.from_user.id)
     _, action, ad_id = call.data.split(":", 2)
@@ -270,13 +263,11 @@ async def remove_from_favorites_handler(call: types.CallbackQuery):
 
     await show_favorites_handler(call)
 
-# Обрабатывает возврат в главное меню
-@menu_router.callback_query(lambda call: call.data == "action:back")
+@menu_router.callback_query(F.data == "action:back")
 async def back_handler(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdsViewForm.select_category)
-    await call.message.bot.send_message(
-        chat_id=call.from_user.id,
-        text="Возврат в главное меню",
+    await call.message.edit_text(  # Изменено на edit_text для консистентности
+        "Возврат в главное меню",
         reply_markup=get_main_menu_keyboard()
     )
     await call.answer()

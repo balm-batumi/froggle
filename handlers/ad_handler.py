@@ -173,7 +173,7 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
         await call.answer()
 
 
-# Обработчик кнопки "Далее" для перехода к вводу названия
+# Обработчик кнопки "Далее" для перехода к вводу заголовка объявления
 @ad_router.callback_query(F.data == "next_to_title", StateFilter(AdAddForm.tags))
 async def process_next_to_title(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -183,7 +183,7 @@ async def process_next_to_title(call: types.CallbackQuery, state: FSMContext):
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
     await call.message.edit_text(
-        CATEGORIES[category]["texts"]["title"],
+        "Введите заголовок объявления",
         reply_markup=keyboard
     )
     await state.set_state(AdAddForm.title)
