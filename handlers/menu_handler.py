@@ -199,7 +199,7 @@ async def show_favorites_handler(call: types.CallbackQuery):
         if not favorites:
             await call.message.bot.send_message(
                 chat_id=call.from_user.id,
-                text="У вас нет избранных объявлений.\n:", reply_markup=get_main_menu_keyboard()
+                text="У вас нет избранных объявлений", reply_markup=get_main_menu_keyboard()
             )
             return
 
@@ -215,10 +215,10 @@ async def show_favorites_handler(call: types.CallbackQuery):
             )
             ad = ad_result.scalar_one_or_none()
             if ad:
-                buttons = [InlineKeyboardButton(
+                buttons = [[InlineKeyboardButton(  # Оборачиваем в список для одной строки
                     text="Удалить из избранного",
                     callback_data=f"favorite:remove:{ad.id}"
-                )]
+                )]]
                 await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
             else:
                 text = f"Объявление больше не доступно"

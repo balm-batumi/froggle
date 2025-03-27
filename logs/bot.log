@@ -3832,3 +3832,150 @@ TypeError: log_callback_middleware() takes 2 positional arguments but 3 were giv
 2025-03-27 09:57:11.133 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:services, state=AdsViewForm:select_category
 2025-03-27 09:57:11.133 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'services' для просмотра объявлений
 2025-03-27 09:57:14.587 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-27 10:30:15.906 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:services, from_id=8162326543
+2025-03-27 10:30:15.909 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 10:30:15.912 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 10:30:15.914 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 10:30:15.919 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:services, state=AdsViewForm:select_category
+2025-03-27 10:30:15.919 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'services' для просмотра объявлений
+2025-03-27 10:30:15.927 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 10:30:15.930 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 10:30:15.933 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 10:30:15.935 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 10:30:16.246 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 10:30:16.247 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 10:30:18.734 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:services, from_id=8162326543
+2025-03-27 10:30:22.727 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-27 10:30:38.411 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-27 10:30:38.582 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-27 10:30:39.201 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-27 10:30:39.725 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 10:30:39.738 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 10:30:39.739 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 10:30:41.168 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:services, from_id=8162326543
+2025-03-27 10:30:41.169 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:services, state=AdsViewForm:select_category
+2025-03-27 10:30:41.170 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'services' для просмотра объявлений
+2025-03-27 10:30:45.173 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city_select:services:Тбилиси, from_id=8162326543
+2025-03-27 10:30:45.175 | INFO     | handlers.ads_handler:show_ads_by_city:62 - Пользователь 8162326543 выбрал город 'Тбилиси' в категории 'services'
+2025-03-27 10:30:45.176 | DEBUG    | handlers.ads_handler:show_ads_by_city:64 - Начало получения тегов для category='services', city='Тбилиси'
+2025-03-27 10:30:45.184 | DEBUG    | handlers.ads_handler:show_ads_by_city:66 - Получены теги: [(4, 'Для дома и быта'), (7, 'Красота/Здоровье/Спорт'), (2, 'Маркетинг')]
+2025-03-27 10:30:52.571 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=skip, from_id=8162326543
+2025-03-27 10:30:52.832 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:24', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:30:53.344 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:32', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:30:53.626 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:34', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:30:54.306 | DEBUG    | handlers.ads_handler:process_tag_filter:221 - Отправлено финальное меню
+2025-03-27 10:31:06.311 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=favorite:add:34, from_id=8162326543
+2025-03-27 10:31:12.794 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-27 10:31:16.343 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:settings, from_id=8162326543
+2025-03-27 10:31:17.907 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=show_favorites, from_id=8162326543
+2025-03-27 10:31:18.185 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [InlineKeyboardButton(text='Удалить из избранного', url=None, callback_data='favorite:remove:27', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]
+2025-03-27 10:38:22.633 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-27 10:38:22.783 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-27 10:38:23.337 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-27 10:38:24.273 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 10:38:24.284 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 10:38:24.286 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 10:38:26.180 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:settings, from_id=8162326543
+2025-03-27 10:38:27.350 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=show_favorites, from_id=8162326543
+2025-03-27 10:38:27.764 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='Удалить из избранного', url=None, callback_data='favorite:remove:27', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:38:31.763 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=favorite:remove:27, from_id=8162326543
+2025-03-27 10:38:31.777 | INFO     | handlers.menu_handler:remove_from_favorites_handler:266 - Пользователь 8162326543 удалил объявление #27 из избранного
+2025-03-27 10:38:35.851 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:settings, from_id=8162326543
+2025-03-27 10:38:37.085 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=show_favorites, from_id=8162326543
+2025-03-27 10:40:10.676 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:settings, from_id=8162326543
+2025-03-27 10:40:12.305 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=show_favorites, from_id=8162326543
+2025-03-27 10:42:57.131 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-27 10:42:57.399 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-27 10:42:57.967 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-27 10:42:58.490 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 10:42:58.501 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 10:42:58.502 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 10:43:00.308 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-27 10:43:00.309 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-27 10:43:00.309 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-27 10:43:13.738 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city_select:housing:Кутаиси, from_id=8162326543
+2025-03-27 10:43:13.739 | INFO     | handlers.ads_handler:show_ads_by_city:62 - Пользователь 8162326543 выбрал город 'Кутаиси' в категории 'housing'
+2025-03-27 10:43:13.739 | DEBUG    | handlers.ads_handler:show_ads_by_city:64 - Начало получения тегов для category='housing', city='Кутаиси'
+2025-03-27 10:43:13.748 | DEBUG    | handlers.ads_handler:show_ads_by_city:66 - Получены теги: [(17, 'Коммерция'), (13, 'Одна спальня'), (11, 'Продаю'), (10, 'Сниму')]
+2025-03-27 10:52:16.632 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-27 10:52:16.884 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-27 10:52:17.436 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-27 10:52:18.461 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 10:52:18.470 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 10:52:18.472 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 10:52:19.992 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-27 10:52:19.993 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-27 10:52:19.993 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-27 10:52:23.699 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city_select:housing:Кутаиси, from_id=8162326543
+2025-03-27 10:52:23.700 | INFO     | handlers.ads_handler:show_ads_by_city:62 - Пользователь 8162326543 выбрал город 'Кутаиси' в категории 'housing'
+2025-03-27 10:52:23.701 | DEBUG    | handlers.ads_handler:show_ads_by_city:64 - Начало получения тегов для category='housing', city='Кутаиси'
+2025-03-27 10:52:23.709 | DEBUG    | handlers.ads_handler:show_ads_by_city:66 - Получены теги: [(17, 'Коммерция'), (13, 'Одна спальня'), (11, 'Продаю'), (10, 'Сниму')]
+2025-03-27 10:52:31.669 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=tag:10, from_id=8162326543
+2025-03-27 10:52:56.178 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=skip, from_id=8162326543
+2025-03-27 10:52:56.537 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:38', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:52:57.210 | DEBUG    | handlers.ads_handler:process_tag_filter:221 - Отправлено финальное меню
+2025-03-27 10:53:01.305 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-27 10:53:03.226 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-27 10:53:03.227 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-27 10:53:03.228 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-27 10:53:04.908 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city_select:housing:Кутаиси, from_id=8162326543
+2025-03-27 10:53:04.910 | INFO     | handlers.ads_handler:show_ads_by_city:62 - Пользователь 8162326543 выбрал город 'Кутаиси' в категории 'housing'
+2025-03-27 10:53:04.911 | DEBUG    | handlers.ads_handler:show_ads_by_city:64 - Начало получения тегов для category='housing', city='Кутаиси'
+2025-03-27 10:53:04.915 | DEBUG    | handlers.ads_handler:show_ads_by_city:66 - Получены теги: [(17, 'Коммерция'), (13, 'Одна спальня'), (11, 'Продаю'), (10, 'Сниму')]
+2025-03-27 10:53:07.454 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=only_new, from_id=8162326543
+2025-03-27 10:53:13.544 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=skip, from_id=8162326543
+2025-03-27 10:53:20.855 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=tag:17, from_id=8162326543
+2025-03-27 10:53:22.526 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=skip, from_id=8162326543
+2025-03-27 10:53:22.785 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:42', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:53:23.187 | DEBUG    | handlers.ads_handler:process_tag_filter:221 - Отправлено финальное меню
+2025-03-27 10:53:30.339 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-27 10:53:33.658 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:services, from_id=8162326543
+2025-03-27 10:53:33.659 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:services, state=AdsViewForm:select_category
+2025-03-27 10:53:33.659 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'services' для просмотра объявлений
+2025-03-27 10:53:37.243 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city_select:services:Тбилиси, from_id=8162326543
+2025-03-27 10:53:37.244 | INFO     | handlers.ads_handler:show_ads_by_city:62 - Пользователь 8162326543 выбрал город 'Тбилиси' в категории 'services'
+2025-03-27 10:53:37.245 | DEBUG    | handlers.ads_handler:show_ads_by_city:64 - Начало получения тегов для category='services', city='Тбилиси'
+2025-03-27 10:53:37.248 | DEBUG    | handlers.ads_handler:show_ads_by_city:66 - Получены теги: [(4, 'Для дома и быта'), (7, 'Красота/Здоровье/Спорт'), (2, 'Маркетинг')]
+2025-03-27 10:53:39.736 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=skip, from_id=8162326543
+2025-03-27 10:53:39.994 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:24', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:53:40.283 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:32', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:53:40.536 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:34', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:53:41.110 | DEBUG    | handlers.ads_handler:process_tag_filter:221 - Отправлено финальное меню
+2025-03-27 10:53:42.539 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-27 10:53:44.508 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:services, from_id=8162326543
+2025-03-27 10:53:44.509 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:services, state=AdsViewForm:select_category
+2025-03-27 10:53:44.509 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'services' для просмотра объявлений
+2025-03-27 10:53:46.914 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=city_select:services:Тбилиси, from_id=8162326543
+2025-03-27 10:53:46.915 | INFO     | handlers.ads_handler:show_ads_by_city:62 - Пользователь 8162326543 выбрал город 'Тбилиси' в категории 'services'
+2025-03-27 10:53:46.915 | DEBUG    | handlers.ads_handler:show_ads_by_city:64 - Начало получения тегов для category='services', city='Тбилиси'
+2025-03-27 10:53:46.919 | DEBUG    | handlers.ads_handler:show_ads_by_city:66 - Получены теги: [(4, 'Для дома и быта'), (7, 'Красота/Здоровье/Спорт'), (2, 'Маркетинг')]
+2025-03-27 10:53:48.501 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=only_new, from_id=8162326543
+2025-03-27 10:53:49.553 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=skip, from_id=8162326543
+2025-03-27 10:53:58.435 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=skip, from_id=8162326543
+2025-03-27 10:53:58.697 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:24', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:53:58.957 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:32', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:53:59.211 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [[InlineKeyboardButton(text='В избранное', url=None, callback_data='favorite:add:34', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]]
+2025-03-27 10:53:59.743 | DEBUG    | handlers.ads_handler:process_tag_filter:221 - Отправлено финальное меню
+2025-03-27 10:54:05.145 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-27 19:35:09.139 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-27 19:35:09.559 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-27 19:35:10.151 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-27 19:35:18.560 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 19:35:18.574 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 19:35:18.575 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 19:35:21.989 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=category:housing, from_id=8162326543
+2025-03-27 19:35:21.990 | DEBUG    | handlers.ads_handler:show_cities_by_category:19 - Хэндлер show_cities_by_category вызван: data=category:housing, state=AdsViewForm:select_category
+2025-03-27 19:35:21.990 | INFO     | handlers.ads_handler:show_cities_by_category:22 - Пользователь 8162326543 выбрал категорию 'housing' для просмотра объявлений
+2025-03-27 19:35:26.244 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:back, from_id=8162326543
+2025-03-27 19:35:27.568 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:settings, from_id=8162326543
+2025-03-27 19:35:29.327 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=show_my_ads, from_id=8162326543
+2025-03-27 19:35:29.864 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [InlineKeyboardButton(text='Удалить', url=None, callback_data='delete_ad:24', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]
+2025-03-27 19:37:14.281 | INFO     | __main__:main:24 - Запуск бота Froggle...
+2025-03-27 19:37:14.440 | INFO     | database:init_db:208 - База данных Froggle_db инициализирована
+2025-03-27 19:37:14.980 | INFO     | __main__:main:37 - Бот успешно настроен, начинаем polling...
+2025-03-27 19:37:16.732 | INFO     | handlers.menu_handler:start_handler:30 - Получена команда /start от telegram_id=8162326543
+2025-03-27 19:37:16.746 | DEBUG    | handlers.menu_handler:start_handler:46 - Пользователь с telegram_id=8162326543 уже существует
+2025-03-27 19:37:16.747 | DEBUG    | handlers.menu_handler:start_handler:49 - Отправляем главное меню с клавиатурой: InlineKeyboardMarkup
+2025-03-27 19:37:18.325 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=action:settings, from_id=8162326543
+2025-03-27 19:37:19.674 | DEBUG    | __main__:log_callback_middleware:20 - Получен callback: data=show_my_ads, from_id=8162326543
+2025-03-27 19:37:20.160 | DEBUG    | tools.utils:render_ad:32 - Buttons перед созданием клавиатуры: [InlineKeyboardButton(text='Удалить', url=None, callback_data='delete_ad:24', web_app=None, login_url=None, switch_inline_query=None, switch_inline_query_current_chat=None, switch_inline_query_chosen_chat=None, copy_text=None, callback_game=None, pay=None)]

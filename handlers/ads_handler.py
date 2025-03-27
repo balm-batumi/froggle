@@ -83,7 +83,7 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text="Найти", callback_data="skip")
     ])
     await call.message.edit_text(
-        f"Выберите теги для фильтрации в {city}:",
+        f"Выберите теги для фильтрации в {city} (или нажмите Найти для поиска без фильтров):",
         reply_markup=keyboard
     )
     await state.set_state(AdsViewForm.select_tags)
@@ -123,7 +123,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
         if only_new:
             selected_filters.append("Только новые")
         await call.message.edit_text(
-            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}):",
+            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}, или нажмите Найти для поиска):",
             reply_markup=keyboard
         )
         return
@@ -144,7 +144,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
         if only_new:
             selected_filters.append("Только новые")
         await call.message.edit_text(
-            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}):",
+            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}, или нажмите Найти для поиска):",
             reply_markup=keyboard
         )
         await call.answer(f"Фильтр 'Только новые': {'вкл' if only_new else 'выкл'}")
