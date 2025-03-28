@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 from aiogram import F
-from states import AdAddForm
+from states import AdAddForm, AdsViewForm  # Добавлен AdsViewForm
 from database import get_db, User, Tag, City, Advertisement, add_advertisement, get_category_tags, get_cities, get_all_category_tags, select  # Добавлен get_all_category_tags
 from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
@@ -48,13 +48,13 @@ async def process_ad_start_from_callback(call: types.CallbackQuery, state: FSMCo
     logger.info(f"process_ad_start_from_callback вызвана для telegram_id={call.from_user.id}")
     data = await state.get_data()
     category = data.get("category")
+    await state.clear()  # Очищаем состояние от старых данных
     if not category or category not in CATEGORIES:
         logger.info(f"Категория не выбрана или неверна: {category}")
         await call.message.edit_text(
-            "Пожалуйста, выберите категорию из главного меню.\n:",
+            "Пожалуйста, выберите категорию из главного меню",
             reply_markup=get_main_menu_keyboard()
         )
-        await state.clear()
         await call.answer()
         return
 
@@ -514,7 +514,7 @@ async def process_ad_contacts_manual(message: types.Message, state: FSMContext):
     await message.answer(preview, reply_markup=keyboard)
     await state.set_state(AdAddForm.confirm)
 
-# Подтверждение объявления
+# Подтверждение объявления и сохранение в базу данных
 @ad_router.callback_query(F.data.startswith("confirm:"), StateFilter(AdAddForm.confirm))
 async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
     action = call.data.split(":", 1)[1]
@@ -528,7 +528,7 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
             user_id = result.scalar_one_or_none()
             if not user_id:
                 await call.message.edit_text("Пользователь не найден. Используйте /start", reply_markup=get_main_menu_keyboard())
-                await state.clear()
+                await state.set_state(AdsViewForm.select_category)
                 return
             ad_id = await add_advertisement(
                 user_id=user_id,
@@ -547,9 +547,9 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
         )
     elif action == "cancel":
         await call.message.edit_text(
-            f"Добавление объявления отменено\n:", reply_markup=get_main_menu_keyboard()
+            f"Добавление объявления отменено", reply_markup=get_main_menu_keyboard()
         )
-    await state.clear()
+    await state.set_state(AdsViewForm.select_category)
     await call.answer()
 
 # Обработчик "Назад"

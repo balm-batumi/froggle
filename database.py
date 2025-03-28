@@ -158,14 +158,14 @@ async def add_advertisement(user_id: int, category: str, city: str, title_ru: st
         return ad.id
 
 
-# Функция для получения тегов по категории и городу из объявлений
+# Возвращает уникальные теги для категории и города из одобренных объявлений
 async def get_category_tags(category: str, city: str) -> list[tuple[int, str]]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Tag.id, Tag.name)
-            .join(Advertisement, Advertisement.tags.any(Tag.name))  # Используем ANY для проверки строки в массиве
+            .join(Advertisement, Advertisement.tags.any(Tag.name))
             .where(Advertisement.category == category, Advertisement.city == city, Advertisement.status == "approved")
-            .distinct()
+            .distinct(Tag.name)  # Уникальность по имени тега
             .order_by(Tag.name)
         )
         return result.all()

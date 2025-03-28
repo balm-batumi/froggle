@@ -3,11 +3,12 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states import MenuState, AdAddForm
-from database import get_db, User, select, Favorite, Advertisement, remove_from_favorites
+from database import get_db, User, select, Favorite, Advertisement, remove_from_favorites, add_to_favorites
 from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
 from tools.utils import render_ad
 from loguru import logger
+from states import AdsViewForm
 
 from states import AdsViewForm
 
@@ -262,6 +263,25 @@ async def remove_from_favorites_handler(call: types.CallbackQuery):
             await call.answer("Объявление не найдено в избранном.", show_alert=True)
 
     await show_favorites_handler(call)
+
+
+# Добавляет объявление в избранное пользователя
+@menu_router.callback_query(F.data.startswith("favorite:add:"))
+async def add_to_favorites_handler(call: types.CallbackQuery):
+    telegram_id = str(call.from_user.id)
+    ad_id = int(call.data.split(":", 2)[2])
+
+    async for session in get_db():
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            await call.answer("Пользователь не найден.", show_alert=True)
+            return
+
+        favorite_id = await add_to_favorites(user.id, ad_id)
+        logger.info(f"Пользователь {telegram_id} добавил объявление #{ad_id} в избранное, favorite_id={favorite_id}")
+        await call.answer("Добавлено в избранное!", show_alert=True)
+
 
 @menu_router.callback_query(F.data == "action:back")
 async def back_handler(call: types.CallbackQuery, state: FSMContext):
