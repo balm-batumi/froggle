@@ -7,11 +7,16 @@ from fastapi import FastAPI, UploadFile, Form, HTTPException
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import FSInputFile  # Для работы с локальными файлами
+from aiogram.exceptions import TelegramAPIError  # Для обработки ошибок Telegram
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 from config import BOT_TOKEN, DATABASE_URL  # Импорт токена и URL базы из config.py
 from database import Advertisement, User, get_db, get_all_category_tags
 from sqlalchemy import select
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.base import StorageKey  # Для работы с FSMContext
+from data.constants import get_main_menu_keyboard  # Для клавиатуры
 import json
 
 # Настройка логирования
@@ -20,9 +25,11 @@ logger.add("logs/api.log", rotation="10MB", compression="zip", level="DEBUG")
 # Инициализация FastAPI и бота Froggle
 app = FastAPI()
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
+storage = MemoryStorage()  # Для работы с FSMContext в API
 
-# ID канала для загрузки фото
+# ID канала для загрузки фото и админа для уведомлений
 CHAT_ID_HOUSING = -1002575896997
+ADMIN_CHAT_ID = 8162326543
 
 # Эндпоинт для получения объявлений от AdSenderBot
 @app.post("/api/notify_admins")
@@ -99,6 +106,50 @@ async def notify_admins(
             ad_id = ad.id
             logger.info(f"Добавлено тестовое объявление #{ad_id} в advertisements")
 
+            # Редактируем сообщение с меню и уведомлением для админа
+            state = FSMContext(
+                storage=storage,
+                key=StorageKey(bot_id=bot.id, chat_id=ADMIN_CHAT_ID, user_id=ADMIN_CHAT_ID)
+            )
+            logger.debug(f"Создан FSMContext для chat_id={ADMIN_CHAT_ID}, user_id={ADMIN_CHAT_ID}")
+            data = await state.get_data()
+            initial_message_id = data.get("initial_message_id")
+            logger.debug(f"Получен initial_message_id из состояния: {initial_message_id}")
+            full_text = f"🏠Главное меню\nУведомления: Новое объявление #{ad_id} добавлено на модерацию"
+            if initial_message_id:
+                logger.debug(f"Попытка редактирования сообщения #{initial_message_id} с текстом: {full_text}")
+                try:
+                    await bot.edit_message_text(
+                        chat_id=ADMIN_CHAT_ID,
+                        message_id=initial_message_id,
+                        text=full_text,
+                        reply_markup=get_main_menu_keyboard()
+                    )
+                    logger.info(f"Успешно отредактировано сообщение #{initial_message_id} для ad_id={ad_id}")
+                except TelegramAPIError as e:
+                    logger.error(f"Ошибка редактирования сообщения #{initial_message_id}: {e}")
+                    # Если редактирование не удалось, отправляем новое сообщение
+                    menu_message = await bot.send_message(
+                        chat_id=ADMIN_CHAT_ID,
+                        text=full_text,
+                        reply_markup=get_main_menu_keyboard()
+                    )
+                    logger.info(f"Отправлено новое сообщение с message_id={menu_message.message_id} для ad_id={ad_id}")
+                    await state.update_data(initial_message_id=menu_message.message_id)
+                    logger.debug(f"Обновлён initial_message_id в состоянии: {menu_message.message_id}")
+            else:
+                # Если сообщение не найдено (например, первый запуск), отправляем новое
+                logger.debug(f"initial_message_id отсутствует, отправляем новое сообщение для ad_id={ad_id}")
+                menu_message = await bot.send_message(
+                    chat_id=ADMIN_CHAT_ID,
+                    text=full_text,
+                    reply_markup=get_main_menu_keyboard()
+                )
+                logger.info(f"Отправлено первое сообщение с message_id={menu_message.message_id} для ad_id={ad_id}")
+                await state.update_data(initial_message_id=menu_message.message_id)
+                logger.debug(f"Сохранён initial_message_id в состоянии: {menu_message.message_id}")
+
+            # Возвращаем только ad_id как простой словарь
             return {"ad_id": ad_id}
         except Exception as e:
             logger.error(f"Ошибка при обработке запроса: {e}")

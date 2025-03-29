@@ -1,3 +1,5 @@
+# handlers/admin_handler.py
+# Обработчики для админских функций Froggle
 from aiogram import Router, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
@@ -54,7 +56,7 @@ async def admin_moderate(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 
-# Одобряет объявление, отправляет уведомления и обновляет список модерации
+# Одобряет объявление, отправляет уведомление админу и обновляет список модерации
 @admin_router.callback_query(F.data.startswith("approve:"), StateFilter(AdminForm.moderation))
 async def approve_ad(call: types.CallbackQuery, state: FSMContext):
     ad_id = int(call.data.split(":")[1])
@@ -65,17 +67,9 @@ async def approve_ad(call: types.CallbackQuery, state: FSMContext):
         if ad:
             ad.status = "approved"
             await session.commit()
-            # Получаем telegram_id владельца
-            user_result = await session.execute(select(User.telegram_id).where(User.id == ad.user_id))
-            user_telegram_id = user_result.scalar_one_or_none()
-            if user_telegram_id and user_telegram_id != telegram_id:
-                await call.message.bot.send_message(
-                    chat_id=user_telegram_id,
-                    text=f"✅ Ваше объявление #{ad_id} принято и теперь доступно для просмотра."
-                )
-            # Сообщение модератору
+            # Отправляем уведомление админу (тебе) в твой чат с Froggle
             await call.message.bot.send_message(
-                chat_id=telegram_id,
+                chat_id=8162326543,  # Твой чат с Froggle
                 text=f"✅ Объявление #{ad_id} успешно принято."
             )
             logger.info(f"Объявление #{ad_id} принято модератором telegram_id={telegram_id}")
