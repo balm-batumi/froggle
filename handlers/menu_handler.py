@@ -113,7 +113,7 @@ async def show_my_ads_handler(call: types.CallbackQuery):
 
         for ad in ads:
             buttons = [[InlineKeyboardButton(text="Удалить", callback_data=f"delete_ad:{ad.id}")]]
-            await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+            await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons, mark_viewed=True)
 
         back_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="Помощь", callback_data="action:help"),
@@ -215,7 +215,7 @@ async def show_favorites_handler(call: types.CallbackQuery):
                     text="Удалить из избранного",
                     callback_data=f"favorite:remove:{ad.id}"
                 )]]
-                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons, mark_viewed=True)
             else:
                 text = f"Объявление больше не доступно"
                 remove_button = InlineKeyboardButton(

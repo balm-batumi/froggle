@@ -8,7 +8,7 @@ from data.categories import CATEGORIES
 
 # Рендерит объявление с медиа и форматированным текстом
 async def render_ad(ad: Advertisement, bot: Bot, chat_id: int, show_status: bool = False,
-                    buttons: list[InlineKeyboardButton] = None):
+                    buttons: list[InlineKeyboardButton] = None, mark_viewed: bool = True):
     from database import mark_ad_as_viewed  # Импорт функции для отметки просмотра
 
     title = ad.title_ru if ad.title_ru else "Без названия"
@@ -34,7 +34,7 @@ async def render_ad(ad: Advertisement, bot: Bot, chat_id: int, show_status: bool
 
     await bot.send_message(
         chat_id=chat_id,
-        text=f"•••••••     Объявление #{ad.id}:     •••••••"
+        text=f"•••••••     Объявление #{ad.id if ad.id else 'новое'}:     •••••••"
     )
 
     if ad.media_file_ids and len(ad.media_file_ids) > 0:
@@ -105,5 +105,6 @@ async def render_ad(ad: Advertisement, bot: Bot, chat_id: int, show_status: bool
             reply_markup=keyboard
         )
 
-    # Отмечаем объявление как просмотренное после успешного вывода
-    await mark_ad_as_viewed(str(chat_id), ad.id)
+    # Отмечаем объявление как просмотренное, только если mark_viewed=True и есть ad.id
+    if mark_viewed and ad.id:
+        await mark_ad_as_viewed(str(chat_id), ad.id)

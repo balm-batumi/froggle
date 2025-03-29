@@ -4,11 +4,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 from aiogram import F
 from states import AdAddForm, AdsViewForm  # Добавлен AdsViewForm
-from database import get_db, User, Tag, City, Advertisement, add_advertisement, get_category_tags, get_cities, get_all_category_tags, select  # Добавлен get_all_category_tags
+from database import get_db, User, Tag, City, Advertisement, add_advertisement, get_category_tags, get_cities, get_all_category_tags, select, Advertisement  # Добавлен get_all_category_tags
 from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
 from loguru import logger
 import asyncio
+from tools.utils import render_ad
 
 ad_router = Router()
 
@@ -217,91 +218,165 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
         await call.answer()
 
 # Обработчик кнопки "Далее" для перехода к вводу заголовка объявления
+# Показывает первое превью с категорией, городом и тегами
 @ad_router.callback_query(F.data == "next_to_title", StateFilter(AdAddForm.tags))
 async def process_next_to_title(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     category = data.get("category")
+    city = data.get("city")
+    tags = data.get("tags", [])
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:title"),
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
+    preview = (
+        f"Ваше объявление:\n"
+        f"{CATEGORIES[category]['display_name']} в {city}\n"
+        f"🏷️ {', '.join(tags)}\n"
+        f"Введите 📌 Заголовок:"
+    )
     await call.message.edit_text(
-        "Введите заголовок объявления",
+        preview,
         reply_markup=keyboard
     )
     await state.set_state(AdAddForm.title)
     await call.answer()
 
-# Ввод заголовка
+
+# Обработчик ввода заголовка объявления
+# Показывает превью с категорией, городом, тегами и заголовком, запрашивает описание
 @ad_router.message(StateFilter(AdAddForm.title))
 async def process_ad_title(message: types.Message, state: FSMContext):
     title = message.text.strip()
     data = await state.get_data()
     category = data.get("category")
+    city = data.get("city")
+    tags = data.get("tags", [])
     await state.update_data(title=title)
+
+    # Формируем превью
+    preview = (
+        "Ваше объявление:\n"
+        f"{CATEGORIES[category]['display_name']} в {city}\n"
+        f"🏷️ {', '.join(tags) if tags else 'Нет тегов'}\n"
+        f"📌 Заголовок: {title}\n"
+        "Введите описание:"
+    )
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:description"),
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
     await message.answer(
-        CATEGORIES[category]["texts"]["description"],
+        preview,
         reply_markup=keyboard
     )
     await state.set_state(AdAddForm.description)
 
-# Ввод описания
+
+# Обработчик ввода описания объявления
+# Показывает превью с категорией, городом, тегами, заголовком и описанием, запрашивает цену
 @ad_router.message(StateFilter(AdAddForm.description))
 async def process_ad_description(message: types.Message, state: FSMContext):
     description = message.text.strip()
     data = await state.get_data()
     category = data.get("category")
+    city = data.get("city")
+    tags = data.get("tags", [])
+    title = data.get("title")
     await state.update_data(description=description)
+
+    # Формируем превью
+    preview = (
+        "Ваше объявление:\n"
+        f"{CATEGORIES[category]['display_name']} в {city}\n"
+        f"🏷️ {', '.join(tags) if tags else 'Нет тегов'}\n"
+        f"📌 Заголовок: {title}\n"
+        f"Описание: {description}\n"
+        "Введите 💰 цену:"
+    )
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Без цены", callback_data="skip_price")],
         [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:price"),
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
     await message.answer(
-        CATEGORIES[category]["texts"]["price"],
+        preview,
         reply_markup=keyboard
     )
     await state.set_state(AdAddForm.price)
 
-# Ввод цены
+
+# Обработчик ввода цены объявления
+# Показывает превью с категорией, городом, тегами, заголовком, описанием и ценой, запрашивает медиа
 @ad_router.message(StateFilter(AdAddForm.price))
 async def process_ad_price(message: types.Message, state: FSMContext):
     data = await state.get_data()
     category = data.get("category")
+    city = data.get("city")
+    tags = data.get("tags", [])
+    title = data.get("title")
+    description = data.get("description")
     price = message.text.strip()[:30]  # Обрезаем до 30 символов
     await state.update_data(price=price)
+
+    # Формируем превью
+    preview = (
+        "Ваше объявление:\n"
+        f"{CATEGORIES[category]['display_name']} в {city}\n"
+        f"🏷️ {', '.join(tags) if tags else 'Нет тегов'}\n"
+        f"📌 Заголовок: {title}\n"
+        f"Описание: {description}\n"
+        f"💰 Цена: {price}"
+    )
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Пропустить загрузку медиа", callback_data="media_skip")],
         [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:media"),
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
     await message.answer(
-        CATEGORIES[category]["texts"]["media"],
+        preview + "\n\n" + CATEGORIES[category]["texts"]["media"],
         reply_markup=keyboard
     )
     await state.set_state(AdAddForm.media)
 
-# Пропуск цены
+
+# Обработчик пропуска ввода цены
+# Показывает превью с категорией, городом, тегами, заголовком, описанием и "Цена: не указана", запрашивает медиа
 @ad_router.callback_query(F.data == "skip_price", StateFilter(AdAddForm.price))
 async def process_ad_price_skip(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(price=None)
     data = await state.get_data()
     category = data.get("category")
+    city = data.get("city")
+    tags = data.get("tags", [])
+    title = data.get("title")
+    description = data.get("description")
+
+    # Формируем превью без цены
+    preview = (
+        "Ваше объявление:\n"
+        f"{CATEGORIES[category]['display_name']} в {city}\n"
+        f"🏷️ {', '.join(tags) if tags else 'Нет тегов'}\n"
+        f"📌 Заголовок: {title}\n"
+        f"Описание: {description}\n"
+        "💰 Цена: не указана"
+    )
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Пропустить загрузку медиа", callback_data="media_skip")],
         [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:media"),
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
     await call.message.edit_text(
-        CATEGORIES[category]["texts"]["media"],
+        preview + "\n\n" + CATEGORIES[category]["texts"]["media"],
         reply_markup=keyboard
     )
     await state.set_state(AdAddForm.media)
     await call.answer()
+
 
 # Обрабатывает загрузку медиа и сохраняет их с типом в формате JSONB
 @ad_router.message(F.photo | F.video, StateFilter(AdAddForm.media))
@@ -410,6 +485,7 @@ async def process_ad_skip(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 # Отправляет варианты выбора контактов для объявления
+# Показывает превью с категорией, городом, тегами, заголовком, описанием, ценой и медиа
 async def _send_contact_options(message_or_call, state: FSMContext):
     if isinstance(message_or_call, types.Message):
         telegram_id = str(message_or_call.from_user.id)
@@ -429,6 +505,26 @@ async def _send_contact_options(message_or_call, state: FSMContext):
         logger.debug(f"Сообщение от бота {telegram_id} проигнорировано")
         return
 
+    category = data.get("category")
+    city = data.get("city")
+    tags = data.get("tags", [])
+    title = data.get("title")
+    description = data.get("description")
+    price = data.get("price")
+    media_file_ids = data.get("media_file_ids", [])
+
+    # Формируем превью
+    media_text = f"Медиа: {len(media_file_ids)} файл{'а' if 2 <= len(media_file_ids) <= 4 else 'ов' if len(media_file_ids) >= 5 else ''}" if media_file_ids else "Медиа: не загружено"
+    preview = (
+        "Ваше объявление:\n"
+        f"{CATEGORIES[category]['display_name']} в {city}\n"
+        f"🏷️ {', '.join(tags) if tags else 'Нет тегов'}\n"
+        f"📌 Заголовок: {title}\n"
+        f"Описание: {description}\n"
+        f"💰 Цена: {price if price else 'не указана'}\n"
+        f"{media_text}"
+    )
+
     logger.debug(f"Получение сохранённых контактов для {telegram_id}")
     async for session in get_db():
         result = await session.execute(
@@ -447,17 +543,19 @@ async def _send_contact_options(message_or_call, state: FSMContext):
         buttons.append([InlineKeyboardButton(text=f"контакт из БД: {saved_contact}", callback_data="contact:saved")])
     if not username and not saved_contact:
         buttons.append([InlineKeyboardButton(text="Ввести вручную", callback_data="contact:manual")])
-    buttons.append([InlineKeyboardButton(text="Помощь", callback_data=f"help:{data.get('category', 'unknown')}:contacts"),
+    buttons.append([InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:contacts"),
                     InlineKeyboardButton(text="Назад", callback_data="back")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     logger.debug(f"Отправка сообщения с контактами для {telegram_id}")
     await bot.send_message(
         chat_id=chat_id,
-        text=CATEGORIES[data.get('category', 'unknown')]["texts"]["contacts"],
+        text=f"{preview}\n\n☎️ {CATEGORIES[category]['texts']['contacts']}",
         reply_markup=keyboard
     )
 
-# Выбор контактов через инлайн-кнопки
+
+# Обработчик выбора контактов через инлайн-кнопки
+# Показывает полное превью объявления с выбранными контактами для уточнения или подтверждения
 @ad_router.callback_query(F.data.startswith("contact:"), StateFilter(AdAddForm.contacts))
 async def process_contact_choice(call: types.CallbackQuery, state: FSMContext):
     action = call.data.split(":", 1)[1]
@@ -465,10 +563,19 @@ async def process_contact_choice(call: types.CallbackQuery, state: FSMContext):
     telegram_id = str(call.from_user.id)
     data = await state.get_data()
 
+    category = data.get("category")
+    city = data.get("city")
+    tags = data.get("tags", [])
+    title = data.get("title")
+    description = data.get("description")
+    price = data.get("price")
+    media_file_ids = data.get("media_file_ids", [])
+
     async for session in get_db():
         result = await session.execute(
             select(Advertisement.contact_info)
-            .where(Advertisement.user_id == select(User.id).where(User.telegram_id == str(telegram_id)).scalar_subquery())
+            .where(
+                Advertisement.user_id == select(User.id).where(User.telegram_id == str(telegram_id)).scalar_subquery())
             .order_by(Advertisement.created_at.desc())
             .limit(1)
         )
@@ -483,42 +590,68 @@ async def process_contact_choice(call: types.CallbackQuery, state: FSMContext):
         return
 
     await state.update_data(selected_contact=contact_text)
+
+    # Формируем превью
+    media_text = f"Медиа: {len(media_file_ids)} файл{'а' if 2 <= len(media_file_ids) <= 4 else 'ов' if len(media_file_ids) >= 5 else ''}" if media_file_ids else "Медиа: не загружено"
+    preview = (
+        "Ваше объявление:\n"
+        f"{CATEGORIES[category]['display_name']} в {city}\n"
+        f"🏷️ {', '.join(tags) if tags else 'Нет тегов'}\n"
+        f"📌 Заголовок: {title}\n"
+        f"Описание: {description}\n"
+        f"💰 Цена: {price if price else 'не указана'}\n"
+        f"{media_text}\n"
+        f"☎️ Контакты: <code>{contact_text}</code>\n"
+        "Введите дополнительные данные или подтвердите:"
+    )
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Подтвердить", callback_data="confirm_contact")],
-        [InlineKeyboardButton(text="Помощь", callback_data=f"help:{data.get('category', 'unknown')}:contacts"),
+        [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:contacts"),
          InlineKeyboardButton(text="Назад", callback_data="back")]
     ])
     await call.message.edit_text(
-        f"Ваши контакты будут выглядеть так: <code>{contact_text}</code>\nВведите дополнительные данные или подтвердите:",
+        preview,
         reply_markup=keyboard
     )
     await call.answer()
 
-# Подтверждение контактов
+
+# Обработчик подтверждения контактов
+# Показывает конечное превью объявления с медиа через render_ad и предлагает сохранить или отменить
 @ad_router.callback_query(F.data == "confirm_contact", StateFilter(AdAddForm.contacts))
 async def process_confirm_contact(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     selected_contact = data.get("selected_contact", "")
     if not selected_contact:
-        await call.message.edit_text("Ошибка: контакт не выбран. Попробуйте снова", reply_markup=get_main_menu_keyboard())
+        await call.message.edit_text("Ошибка: контакт не выбран. Попробуйте снова",
+                                     reply_markup=get_main_menu_keyboard())
         await state.clear()
         return
+
     await state.update_data(contacts=selected_contact)
-    preview = (
-        f"Категория: {data.get('category', 'не указана')}\n"
-        f"Город: {data['city']}\n"
-        f"Теги: {', '.join(data['tags']) if data['tags'] else 'нет'}\n"
-        f"Заголовок: {data['title']}\n"
-        f"Описание: {data['description']}\n"
-        f"Цена: {data.get('price', 'без цены')}\n"
-        f"Медиа: {'Есть' if data.get('media_file_ids') else 'Нет'}\n"
-        f"Контакты: {selected_contact}"
+
+    # Создаём объект Advertisement для render_ad
+    ad = Advertisement(
+        category=data["category"],
+        city=data["city"],
+        tags=data.get("tags", []),
+        title_ru=data["title"],
+        description_ru=data["description"],
+        price=data.get("price"),
+        media_file_ids=data.get("media_file_ids", []),
+        contact_info=selected_contact
     )
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Сохранить", callback_data="confirm:save"),
-         InlineKeyboardButton(text="Отменить", callback_data="confirm:cancel")]
-    ])
-    await call.message.edit_text(preview, reply_markup=keyboard)
+
+    # Формируем кнопки для финального подтверждения
+    buttons = [[
+        InlineKeyboardButton(text="Сохранить", callback_data="confirm:save"),
+        InlineKeyboardButton(text="Отменить", callback_data="confirm:cancel")
+    ]]
+
+    # Отправляем полное превью с медиа, без отметки просмотра
+    await render_ad(ad, call.message.bot, call.from_user.id, show_status=False, buttons=buttons, mark_viewed=False)
+
     await state.set_state(AdAddForm.confirm)
     await call.answer()
 
@@ -568,7 +701,11 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
             result = await session.execute(stmt)
             user_id = result.scalar_one_or_none()
             if not user_id:
-                await call.message.edit_text("Пользователь не найден. Используйте /start", reply_markup=get_main_menu_keyboard())
+                await call.message.bot.send_message(
+                    chat_id=call.from_user.id,
+                    text="Пользователь не найден. Используйте /start",
+                    reply_markup=get_main_menu_keyboard()
+                )
                 await state.set_state(AdsViewForm.select_category)
                 return
             ad_id = await add_advertisement(
@@ -583,15 +720,20 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
                 price=data.get("price")
             )
             logger.info(f"Объявление #{ad_id} добавлено для telegram_id={telegram_id}")
-        await call.message.edit_text(
-            f"Объявление сохранено и отправлено на модерацию", reply_markup=get_main_menu_keyboard()
+        await call.message.bot.send_message(
+            chat_id=call.from_user.id,
+            text=f"Объявление сохранено и отправлено на модерацию",
+            reply_markup=get_main_menu_keyboard()
         )
     elif action == "cancel":
-        await call.message.edit_text(
-            f"Добавление объявления отменено", reply_markup=get_main_menu_keyboard()
+        await call.message.bot.send_message(
+            chat_id=call.from_user.id,
+            text=f"Добавление объявления отменено",
+            reply_markup=get_main_menu_keyboard()
         )
     await state.set_state(AdsViewForm.select_category)
     await call.answer()
+
 
 # Обработчик кнопки "Назад" для возврата в главное меню
 # Устанавливает состояние для просмотра категорий

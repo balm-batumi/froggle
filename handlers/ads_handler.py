@@ -228,7 +228,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                     callback_data=f"favorite:add:{ad.id}"
                 )]]
                 logger.debug(f"Отправка объявления ID {ad.id} для telegram_id={telegram_id}")
-                await render_ad(ad, call.message.bot, call.from_user.id, show_status=False, buttons=buttons)
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=False, buttons=buttons, mark_viewed=True)
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[[
                 InlineKeyboardButton(text="Помощь", callback_data="action:help"),

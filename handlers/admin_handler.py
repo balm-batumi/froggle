@@ -39,9 +39,8 @@ async def admin_moderate(call: types.CallbackQuery, state: FSMContext):
                  InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
                  InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
             ]
-            await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+            await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons, mark_viewed=True)
 
-        # Кнопки "Помощь" и "Назад" в конце списка
         final_buttons = [
             [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
              InlineKeyboardButton(text="Назад", callback_data="action:back")]
@@ -84,7 +83,7 @@ async def approve_ad(call: types.CallbackQuery, state: FSMContext):
                      InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
                      InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
                 ]
-                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons, mark_viewed=True)
             # Кнопки "Помощь" и "Назад" в конце
             final_buttons = [
                 [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
@@ -134,7 +133,7 @@ async def reject_ad(call: types.CallbackQuery, state: FSMContext):
                      InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
                      InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
                 ]
-                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons, mark_viewed=True)
             # Кнопки "Помощь" и "Назад" в конце
             final_buttons = [
                 [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
@@ -199,7 +198,7 @@ async def delete_ad_confirmed(call: types.CallbackQuery, state: FSMContext):
                      InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}"),
                      InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}")]
                 ]
-                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons)
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons, mark_viewed=True)
             # Кнопки "Помощь" и "Назад" в конце
             final_buttons = [
                 [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
