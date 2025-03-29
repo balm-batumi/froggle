@@ -41,7 +41,6 @@ async def process_ad_start(message: types.Message, state: FSMContext):
         reply_markup=keyboard
     )
 
-
 # Обработчик callback’а action:add для начала добавления объявления с текущей категорией
 @ad_router.callback_query(F.data == "action:add")
 async def process_ad_start_from_callback(call: types.CallbackQuery, state: FSMContext):
@@ -77,33 +76,45 @@ async def process_ad_start_from_callback(call: types.CallbackQuery, state: FSMCo
     )
     await call.answer()
 
-
-# Обработчик выбора города для перехода к выбору всех тегов категории
+# Обрабатывает выбор города и переходит к выбору тегов для объявления
 @ad_router.callback_query(F.data.startswith("city:"), StateFilter(AdAddForm.city))
 async def process_city_selection(call: types.CallbackQuery, state: FSMContext):
     _, category, city = call.data.split(":", 2)
     data = await state.get_data()
     logger.info(f"Выбран город '{city}' для telegram_id={call.from_user.id} в категории {category}")
-    await state.update_data(city=city)
-    tags = await get_all_category_tags(category)  # Используем все теги категории
-    if not tags:
+    try:
+        logger.debug(f"Перед обновлением состояния с городом '{city}'")
+        await state.update_data(city=city)
+        logger.debug(f"Состояние обновлено с городом '{city}'")
+        logger.debug(f"Перед вызовом get_all_category_tags для категории '{category}'")
+        tags = await get_all_category_tags(category)  # Используем все теги категории
+        if not tags:
+            await call.message.edit_text(
+                "Нет доступных тегов. Обратитесь к администратору.\n:", reply_markup=get_main_menu_keyboard()
+            )
+            await state.clear()
+            return
+        buttons = [tags[i:i + 3] for i in range(0, len(tags), 3)]
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
+        ] + [[InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:tags"),
+              InlineKeyboardButton(text="Назад", callback_data="back")]])
         await call.message.edit_text(
-            "Нет доступных тегов. Обратитесь к администратору.\n:", reply_markup=get_main_menu_keyboard()
+            CATEGORIES[category]["texts"]["tags"],
+            reply_markup=keyboard
         )
-        await state.clear()
-        return
-    buttons = [tags[i:i + 3] for i in range(0, len(tags), 3)]
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
-    ] + [[InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:tags"),
-          InlineKeyboardButton(text="Назад", callback_data="back")]])
-    await call.message.edit_text(
-        CATEGORIES[category]["texts"]["tags"],
-        reply_markup=keyboard
-    )
-    await call.answer()
-    await state.set_state(AdAddForm.tags)
-
+        await state.set_state(AdAddForm.tags)
+        logger.debug(f"Установлено состояние AdAddForm.tags для telegram_id={call.from_user.id}, текущее состояние: {await state.get_state()}")
+        await call.answer()
+    except Exception as e:
+        logger.error(f"Ошибка в process_city_selection для telegram_id={call.from_user.id}: {str(e)}")
+        await call.message.edit_text(
+            "Произошла ошибка при загрузке тегов. Попробуйте снова.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="Назад", callback_data="back")
+            ]])
+        )
+        await call.answer()
 
 # Обрабатывает выбор "Другой город" и отображает список доступных городов
 @ad_router.callback_query(F.data.startswith("city_other:"), StateFilter(AdAddForm.city))
@@ -126,9 +137,10 @@ async def process_city_other(call: types.CallbackQuery, state: FSMContext):
     )
     await call.answer()
 
-# Обрабатывает выбор тегов для добавления объявления, проверяя наличие обязательных тегов
+# Обрабатывает выбор тегов для объявления, добавляет их в состояние и обновляет клавиатуру
 @ad_router.callback_query(F.data.startswith("tag_select:"), StateFilter(AdAddForm.tags))
 async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
+    logger.debug(f"Начало process_ad_tags для telegram_id={call.from_user.id}, текущее состояние: {await state.get_state()}")
     tag_id = int(call.data.split(":", 1)[1])
     data = await state.get_data()
     category = data.get("category")
@@ -139,39 +151,62 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
         await call.answer("У вас уже выбрано 3 тега", show_alert=True)
         return
 
-    async for session in get_db():
-        result = await session.execute(select(Tag).where(Tag.id == tag_id))
-        tag = result.scalar_one_or_none()
-        if tag and tag.name not in tags:  # Добавляем только новый тег
-            tags.append(tag.name)
-            await state.update_data(tags=tags)
+    try:
+        async for session in get_db():
+            result = await session.execute(select(Tag).where(Tag.id == tag_id))
+            tag = result.scalar_one_or_none()
+            if tag and tag.name not in tags:  # Добавляем только новый тег
+                tags.append(tag.name)
+                await state.update_data(tags=tags)
 
-        if tags == previous_tags:  # Если ничего не изменилось
+            if tags == previous_tags:  # Если ничего не изменилось
+                logger.debug(f"Теги не изменились: {tags}")
+                await call.answer()
+                return
+
+            logger.debug(f"Выбраны теги: {tags}")
+
+            tags_list = await get_all_category_tags(category)  # Используем все теги категории
+            buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]
+            keyboard_rows = [
+                [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
+            ]
+
+            # Проверяем наличие primary_tag
+            primary_tags = [tag.name for tag in (await session.execute(select(Tag).where(Tag.is_primary == True))).scalars().all()]
+            has_primary = any(tag_name in primary_tags for tag_name in tags)
+            logger.debug(f"Primary теги: {primary_tags}, has_primary: {has_primary}")
+
+            if has_primary:
+                keyboard_rows.append([InlineKeyboardButton(text="Далее", callback_data="next_to_title")])
+
+            keyboard_rows.append([
+                InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:tags"),
+                InlineKeyboardButton(text="Назад", callback_data="back")
+            ])
+
+            if has_primary:
+                logger.debug(f"Отображаем сообщение: 'Выбрано: {', '.join(tags)}\nНажмите Далее для продолжения.'")
+                await call.message.edit_text(
+                    f"Выбрано: {', '.join(tags)}\nНажмите 'Далее' для продолжения.",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
+                )
+            else:
+                logger.debug(f"Отображаем сообщение: 'Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из: сдаю, продаю, сниму, куплю.'")
+                await call.message.edit_text(
+                    f"Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из:\nсдаю, продаю, сниму, куплю.",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
+                )
             await call.answer()
-            return
-
-        tags_list = await get_all_category_tags(category)  # Используем все теги категории
-        buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]
-        keyboard_rows = [
-            [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
-        ]
-
-        # Проверяем наличие primary_tag
-        primary_tags = [tag.name for tag in (await session.execute(select(Tag).where(Tag.is_primary == True))).scalars().all()]
-        has_primary = any(tag_name in primary_tags for tag_name in tags)
-        if has_primary:
-            keyboard_rows.append([InlineKeyboardButton(text="Далее", callback_data="next_to_title")])
-            await call.message.edit_text(
-                f"Выбрано: {', '.join(tags)}\nНажмите 'Далее' для продолжения.",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
-            )
-        else:
-            await call.message.edit_text(
-                f"Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из:\nсдаю, продаю, сниму, куплю.",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
-            )
+    except Exception as e:
+        logger.error(f"Ошибка в process_ad_tags для telegram_id={call.from_user.id}: {str(e)}")
+        await call.message.edit_text(
+            "Произошла ошибка при выборе тегов. Попробуйте снова.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="Назад", callback_data="back")
+            ]])
+        )
         await call.answer()
-
 
 # Обработчик кнопки "Далее" для перехода к вводу заголовка объявления
 @ad_router.callback_query(F.data == "next_to_title", StateFilter(AdAddForm.tags))
@@ -188,7 +223,6 @@ async def process_next_to_title(call: types.CallbackQuery, state: FSMContext):
     )
     await state.set_state(AdAddForm.title)
     await call.answer()
-
 
 # Ввод заголовка
 @ad_router.message(StateFilter(AdAddForm.title))
@@ -260,7 +294,6 @@ async def process_ad_price_skip(call: types.CallbackQuery, state: FSMContext):
     )
     await state.set_state(AdAddForm.media)
     await call.answer()
-
 
 # Обрабатывает загрузку медиа и сохраняет их с типом в формате JSONB
 @ad_router.message(F.photo | F.video, StateFilter(AdAddForm.media))

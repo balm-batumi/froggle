@@ -60,8 +60,10 @@ async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
 
 
 # Показывает теги для фильтрации объявлений после выбора города
+# Логирует состояние для проверки корректности FSM
 @ads_router.callback_query(F.data.startswith("city_select:"), StateFilter(AdsViewForm.select_city))
 async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
+    logger.debug(f"show_ads_by_city: Начало обработки для telegram_id={call.from_user.id}, data={call.data}")
     _, category, city = call.data.split(":", 2)
     telegram_id = str(call.from_user.id)
     logger.info(f"Пользователь {telegram_id} выбрал город '{city}' в категории '{category}'")
@@ -92,20 +94,31 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
         reply_markup=keyboard
     )
     await state.set_state(AdsViewForm.select_tags)
+    logger.debug(f"show_ads_by_city: telegram_id={telegram_id}, установленное состояние={await state.get_state()}")
     await call.answer()
 
 
 # Обрабатывает выбор тегов и выводит отфильтрованные объявления
+# Логирует ключевые этапы и очищает старые теги при поиске без фильтров
 @ads_router.callback_query(F.data.startswith(("tag:", "only_new", "skip")), StateFilter(AdsViewForm.select_tags))
 async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
     telegram_id = str(call.from_user.id)
+    logger.debug(f"process_tag_filter: Начало обработки для telegram_id={telegram_id}, callback_data={call.data}")
     data = await state.get_data()
+    logger.debug(f"process_tag_filter: telegram_id={telegram_id}, state_data={data}")
     category = data.get("category")
     city = data.get("city")
     tags = data.get("tags", [])
     only_new = data.get("only_new", False)
+    tags_selected = data.get("tags_selected", False)  # Флаг выбора тегов в текущем поиске
 
     callback_data = call.data
+
+    # Если теги не выбраны в текущем поиске, сбрасываем их
+    if not tags_selected and callback_data != "tag:":
+        tags = []
+        await state.update_data(tags=tags, tags_selected=False)
+
     if callback_data.startswith("tag:"):
         tag_id = int(callback_data.split(":")[1])
         async for session in get_db():
@@ -113,7 +126,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
             tag = result.scalar_one_or_none()
             if tag and tag.name not in tags:
                 tags.append(tag.name)
-                await state.update_data(tags=tags)
+                await state.update_data(tags=tags, tags_selected=True)  # Устанавливаем флаг при выборе тега
                 await call.answer(f"Выбран тег: {tag.name}")
         tags_list = await get_category_tags(category, city)
         buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]
@@ -156,13 +169,14 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
         return
 
     elif callback_data == "skip":
+        logger.debug(f"process_tag_filter: telegram_id={telegram_id}, начало блока skip")
         async for session in get_db():
+            logger.debug(f"process_tag_filter: telegram_id={telegram_id}, перед запросом к базе")
             result = await session.execute(select(User.id).where(User.telegram_id == telegram_id))
             user_id = result.scalar_one_or_none()
             if not user_id:
                 await call.message.edit_text(
-                    "Ошибка: пользователь не найден.\n:",
-                    reply_markup=get_main_menu_keyboard()
+                    "Ошибка: пользователь не найден.\n:", reply_markup=get_main_menu_keyboard()
                 )
                 await state.clear()
                 await call.answer()
@@ -173,7 +187,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                 Advertisement.city == city,
                 Advertisement.status == "approved"
             )
-            if tags:
+            if tags and tags_selected:  # Применяем теги только если они выбраны в текущем поиске
                 query = query.where(Advertisement.tags.contains(tags))
             if only_new:
                 query = query.where(~Advertisement.id.in_(
@@ -181,9 +195,10 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                 ))
             ads = await session.execute(query.order_by(Advertisement.id))
             ads = ads.scalars().all()
+            logger.debug(f"process_tag_filter: telegram_id={telegram_id}, найдено объявлений: {len(ads)}, IDs: {[ad.id for ad in ads]}")
 
             if not ads:
-                await state.update_data(tags=[], only_new=False)
+                await state.update_data(tags=[], only_new=False, tags_selected=False)  # Очищаем теги при отсутствии результатов
                 tags_list = await get_category_tags(category, city)
                 buttons = [tags_list[i:i + 3] for i in range(0, len(tags_list), 3)]
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -200,6 +215,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                 await call.answer()
                 return
 
+            logger.debug(f"process_tag_filter: telegram_id={telegram_id}, начало отправки объявлений")
             await call.message.delete()
             await call.message.bot.send_message(
                 chat_id=call.from_user.id,
@@ -210,6 +226,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                     text="В избранное",
                     callback_data=f"favorite:add:{ad.id}"
                 )]]
+                logger.debug(f"Отправка объявления ID {ad.id} для telegram_id={telegram_id}")
                 await render_ad(ad, call.message.bot, call.from_user.id, show_status=False, buttons=buttons)
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[[
@@ -217,7 +234,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                 InlineKeyboardButton(text="Добавить своё", callback_data="action:add"),
                 InlineKeyboardButton(text="Назад", callback_data="action:back")
             ]])
-            await state.update_data(category=category)
+            await state.update_data(category=category, tags_selected=False)  # Сбрасываем флаг после вывода
             await call.message.bot.send_message(
                 chat_id=call.from_user.id,
                 text="Режим просмотра объявлений",
