@@ -12,12 +12,15 @@ import asyncio
 
 ad_router = Router()
 
-# Начало процесса добавления
+# Обработчик начала процесса добавления объявления через текстовую команду
+# Очищает старые теги и проверяет категорию перед началом
 @ad_router.message(F.text == "Добавить своё")
 async def process_ad_start(message: types.Message, state: FSMContext):
     logger.info(f"process_ad_start вызвана для telegram_id={message.from_user.id}")
     data = await state.get_data()
     category = data.get("category")
+    # Очищаем старые теги перед началом добавления
+    await state.update_data(tags=[])
     if not category or category not in CATEGORIES:
         logger.info(f"Категория не выбрана или неверна: {category}")
         await message.answer("Пожалуйста, выберите категорию из главного меню.\n:", reply_markup=get_main_menu_keyboard())
@@ -138,6 +141,7 @@ async def process_city_other(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 # Обрабатывает выбор тегов для объявления, добавляет их в состояние и обновляет клавиатуру
+# Проверяет обязательные теги с учётом текущей категории
 @ad_router.callback_query(F.data.startswith("tag_select:"), StateFilter(AdAddForm.tags))
 async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
     logger.debug(f"Начало process_ad_tags для telegram_id={call.from_user.id}, текущее состояние: {await state.get_state()}")
@@ -172,10 +176,14 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
                 [InlineKeyboardButton(text=name, callback_data=f"tag_select:{id}") for id, name in row] for row in buttons
             ]
 
-            # Проверяем наличие primary_tag
-            primary_tags = [tag.name for tag in (await session.execute(select(Tag).where(Tag.is_primary == True))).scalars().all()]
-            has_primary = any(tag_name in primary_tags for tag_name in tags)
-            logger.debug(f"Primary теги: {primary_tags}, has_primary: {has_primary}")
+            # Проверяем наличие primary_tag для текущей категории
+            primary_tags = [tag.name for tag in (
+                await session.execute(
+                    select(Tag).where(Tag.is_primary == True, Tag.category == CATEGORIES[category]["tag_category"])
+                )
+            ).scalars().all()]
+            has_primary = any(tag_name in primary_tags for tag_name in tags) if primary_tags else True  # Если нет primary_tags, считаем проверку пройденной
+            logger.debug(f"Primary теги для категории '{category}': {primary_tags}, has_primary: {has_primary}")
 
             if has_primary:
                 keyboard_rows.append([InlineKeyboardButton(text="Далее", callback_data="next_to_title")])
@@ -192,9 +200,9 @@ async def process_ad_tags(call: types.CallbackQuery, state: FSMContext):
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
                 )
             else:
-                logger.debug(f"Отображаем сообщение: 'Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из: сдаю, продаю, сниму, куплю.'")
+                logger.debug(f"Отображаем сообщение: 'Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из: {', '.join(primary_tags)}.'")
                 await call.message.edit_text(
-                    f"Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из:\nсдаю, продаю, сниму, куплю.",
+                    f"Выбрано: {', '.join(tags)}\nВыберите хотя бы один обязательный тег из:\n{', '.join(primary_tags)}.",
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
                 )
             await call.answer()
@@ -585,11 +593,12 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdsViewForm.select_category)
     await call.answer()
 
-# Обработчик "Назад"
+# Обработчик кнопки "Назад" для возврата в главное меню
+# Устанавливает состояние для просмотра категорий
 @ad_router.callback_query(F.data == "back", StateFilter(AdAddForm))
 async def process_ad_back(call: types.CallbackQuery, state: FSMContext):
     await call.message.edit_text("Возврат в главное меню", reply_markup=get_main_menu_keyboard())
-    await state.clear()
+    await state.set_state(AdsViewForm.select_category)  # Устанавливаем состояние для просмотра
     await call.answer()
 
 # Обработчик "Помощь"

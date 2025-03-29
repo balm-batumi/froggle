@@ -21,6 +21,7 @@ async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
     telegram_id = str(call.from_user.id)
     logger.info(f"Пользователь {telegram_id} выбрал категорию '{category}' для просмотра объявлений")
     cities = await get_cities(category)
+    logger.debug(f"Получены города для категории '{category}': {cities}, количество: {len(cities)}")
     if not cities:
         display_name = CATEGORIES[category]["display_name"]
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
