@@ -82,6 +82,19 @@ class Favorite(Base):
     advertisement_id = Column(Integer, ForeignKey("advertisements.id"), nullable=False)
     added_at = Column(DateTime, default=func.now())
 
+
+# Модель Subscription для хранения подписок пользователей
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    city = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    tags = Column(ARRAY(String), nullable=False)  # До трёх тегов
+    created_at = Column(DateTime, default=func.now())
+
+
 # Функции для работы с базой (оставлены без изменений)
 async def add_to_favorites(user_id: int, advertisement_id: int) -> int:
     async with AsyncSessionLocal() as session:

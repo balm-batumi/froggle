@@ -31,7 +31,6 @@ storage = MemoryStorage()  # Для работы с FSMContext в API
 CHAT_ID_HOUSING = -1002575896997
 ADMIN_CHAT_ID = 8162326543
 
-# Эндпоинт для получения объявлений от AdSenderBot
 @app.post("/api/notify_admins")
 async def notify_admins(
     category: str = Form(...),
@@ -43,18 +42,16 @@ async def notify_admins(
     contact_info: str = Form(...),
     status: str = Form(...),
     is_test: bool = Form(...),
-    user_id: str = Form(...),  # telegram_id пользователя
+    user_id: str = Form(...),
     api_key: str = Form(...),
     media: UploadFile = Form(...)
 ):
-    logger.info(f"Получен запрос на /api/notify_admins с api_key={api_key}")
+    logger.info(f"Получен запрос на /api/notify_admins с api_key={api_key}, tags={tags}")
 
-    # Проверка API-ключа
-    if api_key != "secret_key":  # Временный ключ, позже заменим на безопасный
+    if api_key != "secret_key":
         logger.error(f"Неверный api_key: {api_key}")
         raise HTTPException(status_code=403, detail="Invalid API key")
 
-    # Получаем user_id из базы по telegram_id
     async for session in get_db():
         result = await session.execute(select(User.id).where(User.telegram_id == user_id))
         db_user_id = result.scalar_one_or_none()
@@ -62,36 +59,41 @@ async def notify_admins(
             logger.error(f"Пользователь с telegram_id={user_id} не найден")
             raise HTTPException(status_code=400, detail="User not found")
 
-        # Получаем теги для категории
-        tags_list = await get_all_category_tags(category)
-        if not tags_list:
+        # Парсим теги как массив
+        try:
+            tags_list = json.loads(tags) if isinstance(tags, str) and tags.startswith("[") else [tags]
+            logger.debug(f"Спарсенные теги: {tags_list}")
+        except Exception as e:
+            logger.error(f"Ошибка парсинга тегов: {e}, tags={tags}")
+            tags_list = [tags]  # Запасной вариант — один тег
+
+        # Проверяем и фильтруем теги
+        valid_tags = [tag[1] for tag in await get_all_category_tags(category)]
+        if not valid_tags:
             logger.error(f"Нет тегов для категории '{category}'")
             raise HTTPException(status_code=400, detail=f"No tags for category '{category}'")
-        valid_tags = [tag[1] for tag in tags_list]  # Список имён тегов
-        tag = tags if tags in valid_tags else random.choice(tags_list)[1]  # Проверяем тег или берём случайный
+        tags_list = [tag for tag in tags_list if tag in valid_tags]
+        if not tags_list:
+            tags_list = [random.choice(valid_tags)]  # Если ничего не валидно, случайный тег
+        logger.debug(f"Отфильтрованные теги: {tags_list}")
 
-        # Загружаем фото через токен Froggle в канал
         try:
-            # Сохраняем файл временно
             file_content = await media.read()
             temp_file_path = f"temp_{media.filename}"
             with open(temp_file_path, "wb") as temp_file:
                 temp_file.write(file_content)
 
-            # Отправляем фото в канал CHAT_ID_HOUSING
             photo = FSInputFile(temp_file_path)
             sent_photo = await bot.send_photo(chat_id=CHAT_ID_HOUSING, photo=photo)
             media_file_id = sent_photo.photo[-1].file_id
 
-            # Удаляем временный файл
             os.remove(temp_file_path)
 
-            # Создаём объявление
             ad = Advertisement(
                 user_id=db_user_id,
                 category=category,
                 city=city,
-                tags=[tag],
+                tags=tags_list,  # Сохраняем весь массив тегов
                 title_ru=title_ru,
                 description_ru=description_ru,
                 price=price if price else None,
@@ -104,20 +106,16 @@ async def notify_admins(
             await session.commit()
             await session.refresh(ad)
             ad_id = ad.id
-            logger.info(f"Добавлено тестовое объявление #{ad_id} в advertisements")
+            logger.info(f"Добавлено объявление #{ad_id} с тегами: {ad.tags}")
 
-            # Редактируем сообщение с меню и уведомлением для админа
             state = FSMContext(
                 storage=storage,
                 key=StorageKey(bot_id=bot.id, chat_id=ADMIN_CHAT_ID, user_id=ADMIN_CHAT_ID)
             )
-            logger.debug(f"Создан FSMContext для chat_id={ADMIN_CHAT_ID}, user_id={ADMIN_CHAT_ID}")
             data = await state.get_data()
             initial_message_id = data.get("initial_message_id")
-            logger.debug(f"Получен initial_message_id из состояния: {initial_message_id}")
             full_text = f"🏠Главное меню\nУведомления: Новое объявление #{ad_id} добавлено на модерацию"
             if initial_message_id:
-                logger.debug(f"Попытка редактирования сообщения #{initial_message_id} с текстом: {full_text}")
                 try:
                     await bot.edit_message_text(
                         chat_id=ADMIN_CHAT_ID,
@@ -125,31 +123,21 @@ async def notify_admins(
                         text=full_text,
                         reply_markup=get_main_menu_keyboard()
                     )
-                    logger.info(f"Успешно отредактировано сообщение #{initial_message_id} для ad_id={ad_id}")
                 except TelegramAPIError as e:
-                    logger.error(f"Ошибка редактирования сообщения #{initial_message_id}: {e}")
-                    # Если редактирование не удалось, отправляем новое сообщение
                     menu_message = await bot.send_message(
                         chat_id=ADMIN_CHAT_ID,
                         text=full_text,
                         reply_markup=get_main_menu_keyboard()
                     )
-                    logger.info(f"Отправлено новое сообщение с message_id={menu_message.message_id} для ad_id={ad_id}")
                     await state.update_data(initial_message_id=menu_message.message_id)
-                    logger.debug(f"Обновлён initial_message_id в состоянии: {menu_message.message_id}")
             else:
-                # Если сообщение не найдено (например, первый запуск), отправляем новое
-                logger.debug(f"initial_message_id отсутствует, отправляем новое сообщение для ad_id={ad_id}")
                 menu_message = await bot.send_message(
                     chat_id=ADMIN_CHAT_ID,
                     text=full_text,
                     reply_markup=get_main_menu_keyboard()
                 )
-                logger.info(f"Отправлено первое сообщение с message_id={menu_message.message_id} для ad_id={ad_id}")
                 await state.update_data(initial_message_id=menu_message.message_id)
-                logger.debug(f"Сохранён initial_message_id в состоянии: {menu_message.message_id}")
 
-            # Возвращаем только ad_id как простой словарь
             return {"ad_id": ad_id}
         except Exception as e:
             logger.error(f"Ошибка при обработке запроса: {e}")
