@@ -688,7 +688,7 @@ async def process_ad_contacts_manual(message: types.Message, state: FSMContext):
     await message.answer(preview, reply_markup=keyboard)
     await state.set_state(AdAddForm.confirm)
 
-# Подтверждение объявления и сохранение в базу данных
+# Подтверждает и сохраняет объявление в базу с выводом ID
 @ad_router.callback_query(F.data.startswith("confirm:"), StateFilter(AdAddForm.confirm))
 async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
     action = call.data.split(":", 1)[1]
@@ -720,11 +720,11 @@ async def process_ad_confirm(call: types.CallbackQuery, state: FSMContext):
                 price=data.get("price")
             )
             logger.info(f"Объявление #{ad_id} добавлено для telegram_id={telegram_id}")
-        await call.message.bot.send_message(
-            chat_id=call.from_user.id,
-            text=f"Объявление сохранено и отправлено на модерацию",
-            reply_markup=get_main_menu_keyboard()
-        )
+            await call.message.bot.send_message(
+                chat_id=call.from_user.id,
+                text=f"Объявление №{ad_id} сохранено и отправлено на модерацию",
+                reply_markup=get_main_menu_keyboard()
+            )
     elif action == "cancel":
         await call.message.bot.send_message(
             chat_id=call.from_user.id,

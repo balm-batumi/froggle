@@ -52,13 +52,10 @@ async def start_handler(message: types.Message, state: FSMContext):
         reply_markup=get_main_menu_keyboard()
     )
 
+# Обрабатывает нажатие кнопки "Помощь" и показывает алерт с заглушкой
 @menu_router.callback_query(F.data == "action:help")
 async def help_handler(call: types.CallbackQuery):
-    await call.message.edit_text(
-        "Froggle — ваш помощник. Выберите категорию для просмотра объявлений.",
-        reply_markup=get_main_menu_keyboard()
-    )
-    await call.answer()
+    await call.answer("Здесь будет контекстная помощь", show_alert=True)
 
 # Обработчик команды "Настройки" для отображения меню настроек
 @menu_router.callback_query(F.data == "action:settings")

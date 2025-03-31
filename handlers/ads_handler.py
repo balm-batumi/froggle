@@ -7,7 +7,7 @@ from loguru import logger
 from database import get_db, Advertisement, get_cities, get_category_tags, is_favorite, User, add_to_favorites, Tag, ViewedAds
 from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
-from tools.utils import render_ad
+from tools.utils import render_ad, get_navigation_keyboard
 from states import AdsViewForm, AdAddForm
 
 ads_router = Router()
@@ -61,7 +61,6 @@ async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
 
 
 # Показывает теги для фильтрации объявлений после выбора города
-# Логирует состояние для проверки корректности FSM
 @ads_router.callback_query(F.data.startswith("city_select:"), StateFilter(AdsViewForm.select_city))
 async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
     logger.debug(f"show_ads_by_city: Начало обработки для telegram_id={call.from_user.id}, data={call.data}")
@@ -90,6 +89,7 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text="Только новые", callback_data="only_new"),
         InlineKeyboardButton(text="Найти", callback_data="skip")
     ])
+    keyboard.inline_keyboard.append(get_navigation_keyboard().inline_keyboard[0])  # Добавляем "Помощь" и "Назад"
     await call.message.edit_text(
         f"Выберите теги для фильтрации в {city} (или нажмите Найти для поиска без фильтров):",
         reply_markup=keyboard
@@ -99,8 +99,7 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 
-# Обрабатывает выбор тегов и выводит отфильтрованные объявления
-# Логирует ключевые этапы и очищает старые теги при поиске без фильтров
+# Обрабатывает выбор тегов и выводит отфильтрованные объявления по принципу "ИЛИ"
 @ads_router.callback_query(F.data.startswith(("tag:", "only_new", "skip")), StateFilter(AdsViewForm.select_tags))
 async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
     telegram_id = str(call.from_user.id)
@@ -138,6 +137,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
             InlineKeyboardButton(text="Только новые" if not only_new else "Все объявления", callback_data="only_new"),
             InlineKeyboardButton(text="Найти", callback_data="skip")
         ])
+        keyboard.inline_keyboard.append(get_navigation_keyboard().inline_keyboard[0])  # Добавляем "Помощь" и "Назад"
         selected_filters = tags.copy()
         if only_new:
             selected_filters.append("Только новые")
@@ -159,6 +159,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
             InlineKeyboardButton(text="Только новые" if not only_new else "Все объявления", callback_data="only_new"),
             InlineKeyboardButton(text="Найти", callback_data="skip")
         ])
+        keyboard.inline_keyboard.append(get_navigation_keyboard().inline_keyboard[0])  # Добавляем "Помощь" и "Назад"
         selected_filters = tags.copy()
         if only_new:
             selected_filters.append("Только новые")
@@ -188,8 +189,8 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                 Advertisement.city == city,
                 Advertisement.status == "approved"
             )
-            if tags and tags_selected:  # Применяем теги только если они выбраны в текущем поиске
-                query = query.where(Advertisement.tags.contains(tags))
+            if tags and tags_selected:  # Применяем теги как "ИЛИ"
+                query = query.where(Advertisement.tags.overlap(tags))
             if only_new:
                 query = query.where(~Advertisement.id.in_(
                     select(ViewedAds.advertisement_id).where(ViewedAds.user_id == user_id)
@@ -209,6 +210,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
                     InlineKeyboardButton(text="Только новые", callback_data="only_new"),
                     InlineKeyboardButton(text="Найти", callback_data="skip")
                 ])
+                keyboard.inline_keyboard.append(get_navigation_keyboard().inline_keyboard[0])  # Добавляем "Помощь" и "Назад"
                 await call.message.edit_text(
                     f"Объявлений в {city} по вашим фильтрам не найдено. Попробуйте другие фильтры:",
                     reply_markup=keyboard
@@ -220,7 +222,7 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
             await call.message.delete()
             await call.message.bot.send_message(
                 chat_id=call.from_user.id,
-                text=f"Найдено {len(ads)} объявлений\n" + "―" * 27
+                text=f"Найдено {len(ads)} объявлений\n" + "―" * 21
             )
             for ad in ads:
                 buttons = [[InlineKeyboardButton(
