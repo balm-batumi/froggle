@@ -73,7 +73,7 @@ class ViewedAds(Base):
     __tablename__ = "viewed_ads"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    advertisement_id = Column(Integer, ForeignKey("advertisements.id"), nullable=False)
+    advertisement_id = Column(Integer, ForeignKey("advertisements.id", ondelete="CASCADE"), nullable=False)
 
 class Favorite(Base):
     __tablename__ = "favorites"

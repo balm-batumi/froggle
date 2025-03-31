@@ -38,34 +38,26 @@ async def admin_moderate(call: types.CallbackQuery, state: FSMContext):
             await call.message.edit_text("Нет объявлений для модерации.\n🏠:", reply_markup=get_main_menu_keyboard())
             return
 
-        # Рендеринг каждого объявления
+        # Рендеринг каждого объявления с кнопками
         for ad in ads:
-            # Сначала рендерим объявление без кнопок
-            message_ids = await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, mark_viewed=False)
-            # Формируем кнопки с использованием message_ids
-            buttons = [
-                [InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad.id}:[{','.join(map(str, message_ids))}]"),
-                 InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}:[{','.join(map(str, message_ids))}]"),
-                 InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}:[{','.join(map(str, message_ids))}]")]
-            ]
-            # Формируем полный текст объявления
-            ad_text = f"<b>{CATEGORIES[ad.category]['display_name']}</b> в {ad.city}\n"
-            ad_text += f"🏷️ {', '.join(ad.tags)}\n" if ad.tags else ""
-            ad_text += f"📌 <b>{ad.title_ru}</b>\n" if ad.title_ru else ""
-            ad_text += f"{ad.description_ru}\n" if ad.description_ru else ""
-            ad_text += f"💰 {ad.price}\n" if ad.price else "💰 без цены\n"
-            ad_text += f"📞 {ad.contact_info}\n" if ad.contact_info else ""
-            ad_text += f"Статус: {ad.status}"
-            logger.debug(f"Полный текст объявления #{ad.id}: {ad_text}")
-            # Редактируем последнее сообщение, добавляя кнопки
-            await call.message.bot.edit_message_text(
-                text=ad_text,
+            buttons = [[
+                InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad.id}:[]"),
+                InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}:[]"),
+                InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}:[]")
+            ]]
+            message_ids = await render_ad(ad, call.message.bot, call.from_user.id, show_status=True, buttons=buttons, mark_viewed=False)
+            logger.debug(f"Рендер объявления #{ad.id}, message_ids={message_ids}")
+            # Обновляем callback_data с message_ids
+            updated_buttons = [[
+                InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad.id}:[{','.join(map(str, message_ids))}]"),
+                InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad.id}:[{','.join(map(str, message_ids))}]"),
+                InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad.id}:[{','.join(map(str, message_ids))}]")
+            ]]
+            await call.message.bot.edit_message_reply_markup(
                 chat_id=telegram_id,
                 message_id=message_ids[-1],
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-                parse_mode="HTML"
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=updated_buttons)
             )
-            logger.debug(f"Рендер объявления #{ad.id}, message_ids={message_ids}")
 
         # Отправка навигационной клавиатуры
         await call.message.bot.send_message(
@@ -213,75 +205,172 @@ async def reject_ad(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 
-# Обработчик удаления объявления
+# Запрашивает подтверждение удаления, редактируя сообщение объявления
 @admin_router.callback_query(F.data.startswith("delete:"))
 async def delete_ad(call: types.CallbackQuery):
     logger.debug(f"Вызван delete_ad с callback_data={call.data}, from_id={call.from_user.id}")
-    ad_id = int(call.data.split(":", 1)[1])
+    parts = call.data.split(":")
+    ad_id = int(parts[1])  # Извлекаем ID объявления
+    message_ids = parts[2].strip("[]").split(",") if len(parts) > 2 and parts[2] else []  # Извлекаем message_ids
     telegram_id = str(call.from_user.id)
-    logger.debug(f"Извлечён ad_id={ad_id}, telegram_id={telegram_id}")
+    logger.debug(f"Извлечены ad_id={ad_id}, telegram_id={telegram_id}, message_ids={message_ids}")
+
+    if not message_ids:
+        logger.error(f"Нет message_ids для ad_id={ad_id}, невозможно отредактировать сообщение")
+        await call.message.bot.send_message(
+            chat_id=telegram_id,
+            text="Ошибка: не удалось найти сообщение для редактирования."
+        )
+        await call.answer()
+        return
+
+    # Формируем клавиатуру с подтверждением
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Да", callback_data=f"delete_confirm:{ad_id}:[{','.join(message_ids)}]"),
+        InlineKeyboardButton(text="Нет", callback_data=f"cancel_delete:{ad_id}:[{','.join(message_ids)}]")
+    ]])
+
+    # Редактируем последнее сообщение объявления
+    last_message_id = int(message_ids[-1])
+    try:
+        await call.message.bot.edit_message_text(
+            chat_id=telegram_id,
+            message_id=last_message_id,
+            text=f"{call.message.text}\n\nУдалить объявление #{ad_id}?",
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.debug(f"Сообщение {last_message_id} отредактировано с запросом подтверждения для ad_id={ad_id}")
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения {last_message_id} для ad_id={ad_id}: {e}")
+        await call.message.bot.send_message(
+            chat_id=telegram_id,
+            text="Ошибка при запросе подтверждения."
+        )
+
+    await call.answer()
+
+
+# Удаляет объявление из базы и чата, заменяя последнее сообщение подтверждением
+@admin_router.callback_query(F.data.startswith("delete_confirm:"))
+async def delete_ad_confirmed(call: types.CallbackQuery, state: FSMContext):
+    logger.debug(f"Вызван delete_ad_confirmed с callback_data={call.data}, from_id={call.from_user.id}")
+    parts = call.data.split(":")
+    ad_id = int(parts[1])  # Извлекаем ID объявления
+    message_ids = parts[2].strip("[]").split(",") if len(parts) > 2 and parts[2] else []  # Извлекаем message_ids
+    telegram_id = str(call.from_user.id)
+    logger.debug(f"Извлечены ad_id={ad_id}, telegram_id={telegram_id}, message_ids={message_ids}")
+
+    if not message_ids:
+        logger.error(f"Нет message_ids для ad_id={ad_id}, невозможно подтвердить удаление")
+        await call.message.bot.send_message(
+            chat_id=telegram_id,
+            text="Ошибка: не удалось подтвердить удаление."
+        )
+        await call.answer()
+        return
+
+    # Удаляем все сообщения, кроме последнего
+    last_message_id = int(message_ids[-1])
+    for msg_id in message_ids[:-1]:
+        try:
+            await call.message.bot.delete_message(chat_id=telegram_id, message_id=int(msg_id))
+            logger.debug(f"Удалено сообщение {msg_id} для ad_id={ad_id}")
+        except Exception as e:
+            logger.error(f"Ошибка удаления сообщения {msg_id} для ad_id={ad_id}: {e}")
+
     async for session in get_db():
         logger.debug(f"Начало сессии БД для ad_id={ad_id}")
         result = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
         ad = result.scalar_one_or_none()
         logger.debug(f"Результат запроса объявления: {ad}")
         if ad:
-            await session.delete(ad)
-            await session.commit()
-            logger.info(f"Объявление #{ad_id} удалено модератором telegram_id={telegram_id}")
-
-    logger.debug(f"Отправка подтверждения для ad_id={ad_id}")
-    await call.message.bot.send_message(
-        chat_id=telegram_id,
-        text="Объявление удалено"
-    )
-    await call.answer()
-    logger.debug(f"Завершение delete_ad для ad_id={ad_id}")
-
-
-# handlers/admin_handler.py
-# Обрабатывает подтверждение удаления объявления, удаляет все связанные сообщения и само объявление
-@admin_router.callback_query(F.data.startswith("delete_confirm:"))
-async def delete_ad_confirmed(call: types.CallbackQuery, state: FSMContext):
-    logger.debug(f"Вызван delete_ad_confirmed с callback_data={call.data}, from_id={call.from_user.id}")
-    parts = call.data.split(":")
-    ad_id = int(parts[1])
-    message_ids = [int(mid) for mid in parts[2].strip("[]").split(",")] if len(parts) > 2 else []
-    telegram_id = str(call.from_user.id)
-    logger.debug(f"Извлечён ad_id={ad_id}, telegram_id={telegram_id}, message_ids={message_ids}")
-
-    # Удаление всех сообщений, связанных с объявлением
-    for msg_id in message_ids:
-        try:
-            await call.message.bot.delete_message(chat_id=telegram_id, message_id=msg_id)
-            logger.debug(f"Удалено сообщение {msg_id} для ad_id={ad_id}")
-        except Exception as e:
-            logger.error(f"Ошибка удаления сообщения {msg_id} для ad_id={ad_id}: {e}")
-
-    async for session in get_db():
-        result = await session.execute(select(Advertisement).where(Advertisement.id == ad_id))
-        ad = result.scalar_one_or_none()
-        if ad:
             user_result = await session.execute(select(User.telegram_id).where(User.id == ad.user_id))
             user_telegram_id = user_result.scalar_one_or_none()
             await session.delete(ad)
-            await session.commit()
-            if user_telegram_id and user_telegram_id != telegram_id:
-                await call.message.bot.send_message(
-                    chat_id=user_telegram_id,
-                    text=f"🗑 Ваше объявление #{ad_id} удалено модератором."
-                )
-            await call.message.bot.send_message(
-                chat_id=telegram_id,
-                text=f"🗑 Объявление #{ad_id} удалено."
-            )
+            await session.commit()  # Теперь с CASCADE удалит записи из viewed_ads автоматически
             logger.info(f"Объявление #{ad_id} удалено модератором telegram_id={telegram_id}")
-            # Отправка навигационной клавиатуры
-            await call.message.bot.send_message(
-                chat_id=telegram_id,
-                text="Режим модерации",
-                reply_markup=get_navigation_keyboard()
-            )
+            if user_telegram_id and user_telegram_id != telegram_id:
+                try:
+                    await call.message.bot.send_message(
+                        chat_id=user_telegram_id,
+                        text=f"🗑 Ваше объявление #{ad_id} удалено модератором."
+                    )
+                    logger.debug(f"Уведомление отправлено автору telegram_id={user_telegram_id}")
+                except Exception as e:
+                    logger.error(f"Ошибка отправки уведомления автору telegram_id={user_telegram_id}: {e}")
+
+    # Редактируем последнее сообщение с подтверждением
+    try:
+        await call.message.bot.edit_message_text(
+            chat_id=telegram_id,
+            message_id=last_message_id,
+            text=f"🗑 Объявление #{ad_id} удалено.",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        logger.debug(f"Подтверждение удаления отображено в message_id={last_message_id} для ad_id={ad_id}")
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения {last_message_id} для ad_id={ad_id}: {e}")
+        await call.message.bot.send_message(
+            chat_id=telegram_id,
+            text=f"🗑 Объявление #{ad_id} удалено (ошибка отображения)."
+        )
 
     await state.set_state(AdminForm.moderation)
+    await call.answer()
+
+
+# Отменяет запрос удаления, восстанавливая исходные кнопки объявления
+@admin_router.callback_query(F.data.startswith("cancel_delete:"))
+async def cancel_delete(call: types.CallbackQuery):
+    logger.debug(f"Вызван cancel_delete с callback_data={call.data}, from_id={call.from_user.id}")
+    parts = call.data.split(":")
+    ad_id = int(parts[1])  # Извлекаем ID объявления
+    message_ids = parts[2].strip("[]").split(",") if len(parts) > 2 and parts[2] else []  # Извлекаем message_ids
+    telegram_id = str(call.from_user.id)
+    logger.debug(f"Извлечены ad_id={ad_id}, telegram_id={telegram_id}, message_ids={message_ids}")
+
+    if not message_ids:
+        logger.error(f"Нет message_ids для ad_id={ad_id}, невозможно восстановить кнопки")
+        await call.message.bot.send_message(
+            chat_id=telegram_id,
+            text="Ошибка: не удалось восстановить кнопки."
+        )
+        await call.answer()
+        return
+
+    # Формируем исходные кнопки
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Принять", callback_data=f"approve:{ad_id}:[{','.join(message_ids)}]"),
+        InlineKeyboardButton(text="Отклонить", callback_data=f"reject:{ad_id}:[{','.join(message_ids)}]"),
+        InlineKeyboardButton(text="Удалить", callback_data=f"delete:{ad_id}:[{','.join(message_ids)}]")
+    ]])
+
+    # Убираем строку подтверждения из текста
+    current_text = call.message.text
+    confirmation_line = f"\n\nУдалить объявление #{ad_id}?"
+    if confirmation_line in current_text:
+        original_text = current_text.replace(confirmation_line, "")
+    else:
+        original_text = current_text  # Если строка не найдена, оставляем как есть
+
+    # Редактируем сообщение
+    last_message_id = int(message_ids[-1])
+    try:
+        await call.message.bot.edit_message_text(
+            chat_id=telegram_id,
+            message_id=last_message_id,
+            text=original_text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.debug(f"Кнопки восстановлены для ad_id={ad_id}, message_id={last_message_id}")
+    except Exception as e:
+        logger.error(f"Ошибка восстановления кнопок для ad_id={ad_id}, message_id={last_message_id}: {e}")
+        await call.message.bot.send_message(
+            chat_id=telegram_id,
+            text="Ошибка при восстановлении кнопок."
+        )
+
     await call.answer()
