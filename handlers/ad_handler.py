@@ -9,7 +9,7 @@ from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
 from loguru import logger
 import asyncio
-from tools.utils import render_ad
+from tools.utils import render_ad, format_ad_text
 
 ad_router = Router()
 
@@ -243,8 +243,6 @@ async def process_next_to_title(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 
-# Обработчик ввода заголовка объявления
-# Показывает превью с категорией, городом, тегами и заголовком, запрашивает описание
 @ad_router.message(StateFilter(AdAddForm.title))
 async def process_ad_title(message: types.Message, state: FSMContext):
     title = message.text.strip()
@@ -254,14 +252,12 @@ async def process_ad_title(message: types.Message, state: FSMContext):
     tags = data.get("tags", [])
     await state.update_data(title=title)
 
-    # Формируем превью
-    preview = (
-        "Ваше объявление:\n"
-        f"{CATEGORIES[category]['display_name']} в {city}\n"
-        f"🏷️ {', '.join(tags) if tags else 'Нет тегов'}\n"
-        f"📌 Заголовок: {title}\n"
-        "Введите описание:"
-    )
+    logger.debug(f"Вход в process_ad_title: category={category}, city={city}, tags={tags}, title={title}")
+    ad = Advertisement(category=category, city=city, tags=tags, title_ru=title)
+    lines = format_ad_text(ad, fields=['title'], complete=False)
+    logger.debug(f"Результат format_ad_text: {lines}")
+    preview = "Ваше объявление:\n" + "\n".join(lines) + "\nВведите описание:"
+    logger.debug(f"Отправляемый текст: {preview}")
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Помощь", callback_data=f"help:{category}:description"),

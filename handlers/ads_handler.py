@@ -13,7 +13,8 @@ from states import AdsViewForm, AdAddForm
 ads_router = Router()
 
 
-# Обработчик выбора категории для показа городов или сообщения об отсутствии объявлений
+# handlers/ads_handler.py
+# Обрабатывает выбор категории и показывает города с кнопкой "Добавить своё" перед навигацией
 @ads_router.callback_query(F.data.startswith("category:"), StateFilter(AdsViewForm.select_category))
 async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
     logger.debug(f"Хэндлер show_cities_by_category вызван: data={call.data}, state={await state.get_state()}")
@@ -25,12 +26,10 @@ async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
     if not cities:
         display_name = CATEGORIES[category]["display_name"]
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Помощь", callback_data="action:help"),
-                InlineKeyboardButton(text="Добавить своё", callback_data="action:add"),
-                InlineKeyboardButton(text="Назад", callback_data="action:back")
-            ]
+            *get_navigation_keyboard().inline_keyboard  # Используем стандартную навигацию
         ])
+        # Добавляем "Добавить своё" даже если нет городов
+        keyboard.inline_keyboard.insert(0, [InlineKeyboardButton(text="РАЗМЕСТИТЬ ОБЪЯВЛЕНИЕ", callback_data="action:add")])
         await state.update_data(category=category)
         await call.message.edit_text(
             f"В категории '{display_name}' нет одобренных объявлений",
@@ -46,11 +45,11 @@ async def show_cities_by_category(call: types.CallbackQuery, state: FSMContext):
             text=f"{city} ({count})",
             callback_data=f"city_select:{category}:{city}"
         ) for city, count in row] for row in buttons
-    ] + [[
-        InlineKeyboardButton(text="Помощь", callback_data="action:help"),
-        InlineKeyboardButton(text="Добавить своё", callback_data="action:add"),
-        InlineKeyboardButton(text="Назад", callback_data="action:back")
-    ]])
+    ])
+    # Добавляем "Добавить своё" после городов
+    keyboard.inline_keyboard.append([InlineKeyboardButton(text="РАЗМЕСТИТЬ ОБЪЯВЛЕНИЕ", callback_data="action:add")])
+    # Добавляем навигационную клавиатуру в конец
+    keyboard.inline_keyboard.extend(get_navigation_keyboard().inline_keyboard)
     await call.message.edit_text(
         "Выберите город для просмотра объявлений:",
         reply_markup=keyboard
