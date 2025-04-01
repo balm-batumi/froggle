@@ -6,6 +6,8 @@ from loguru import logger
 from database import mark_ad_as_viewed
 from data.categories import CATEGORIES
 from typing import List, Optional
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
 
 
 # Создает клавиатуру с кнопками "Помощь" и "Назад" для навигации
@@ -116,3 +118,55 @@ async def render_ad(ad: Advertisement, bot: Bot, chat_id: int, show_status: bool
         await mark_ad_as_viewed(str(chat_id), ad.id)
 
     return message_ids
+
+
+# Утилита для удаления списка сообщений с обработкой ошибок
+async def delete_messages(bot: Bot, chat_id: int, message_ids: list[int]) -> None:
+    """
+    Удаляет сообщения по их ID в указанном чате.
+
+    Args:
+        bot: Объект бота для выполнения операций.
+        chat_id: ID чата, где нужно удалить сообщения.
+        message_ids: Список ID сообщений для удаления.
+    """
+    for msg_id in message_ids:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            logger.debug(f"Удалено сообщение {msg_id} в чате {chat_id}")
+        except Exception as e:
+            logger.error(f"Ошибка удаления сообщения {msg_id} в чате {chat_id}: {e}")
+
+
+async def notify_user(bot: Bot, telegram_id: str, text: str, state: FSMContext, reply_markup=None) -> None:
+    """
+    Отправляет уведомление пользователю, удаляя предыдущее, и сохраняет message_id в состоянии.
+
+    Args:
+        bot: Объект бота для отправки сообщения.
+        telegram_id: Telegram ID пользователя.
+        text: Текст уведомления.
+        state: Контекст FSM для сохранения message_id.
+        reply_markup: Опциональная клавиатура (по умолчанию None).
+    """
+    notification_state = FSMContext(
+        storage=state.storage,
+        key=StorageKey(bot_id=bot.id, chat_id=int(telegram_id), user_id=int(telegram_id))
+    )
+    current_data = await notification_state.get_data()
+    old_message_id = current_data.get("rejection_notification_id")
+
+    if old_message_id:
+        try:
+            await bot.delete_message(chat_id=telegram_id, message_id=old_message_id)
+            logger.debug(f"Удалено старое уведомление message_id={old_message_id} для telegram_id={telegram_id}")
+        except Exception as e:
+            logger.debug(f"Не удалось удалить старое уведомление message_id={old_message_id}: {e}")
+
+    try:
+        msg = await bot.send_message(chat_id=telegram_id, text=text, reply_markup=reply_markup)
+        await notification_state.update_data(rejection_notification_id=msg.message_id)
+        logger.debug(
+            f"Уведомление отправлено telegram_id={telegram_id}, message_id={msg.message_id}, text='{text[:35]}...'")
+    except Exception as e:
+        logger.error(f"Ошибка отправки уведомления telegram_id={telegram_id}: {e}")
