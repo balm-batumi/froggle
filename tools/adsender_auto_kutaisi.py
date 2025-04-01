@@ -99,7 +99,7 @@ async def send_ad_handler(message: types.Message):
         "status": "pending",
         "is_test": True,
         "api_key": API_KEY,
-        "user_id": "test_sender"
+        "user_id": "7937566977"
     }
     logger.debug(f"Данные для API: {data}")
 

@@ -15,6 +15,7 @@ from handlers.admin_handler import admin_router
 from states import AdsViewForm
 from data.constants import get_main_menu_keyboard
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey  # Исправленный импорт
 
 logger.add("logs/froggle.log", rotation="10MB", compression="zip", level="DEBUG")
 
@@ -26,64 +27,40 @@ async def log_callback_middleware(handler, event: types.CallbackQuery, data: dic
     logger.debug(f"Получен callback: data={event.data}, from_id={event.from_user.id}, current_state={await data['state'].get_state()}")
     return await handler(event, data)
 
+
+# Middleware для удаления уведомлений при действиях пользователя
+async def clean_notification(handler, event, data):
+    telegram_id = event.from_user.id
+    state = FSMContext(storage=dp.storage, key=StorageKey(bot_id=bot.id, chat_id=telegram_id, user_id=telegram_id))
+    data_state = await state.get_data()
+
+    # Удаление уведомления о подписке (существующая логика)
+    notification_id = data_state.get("notification_id")
+    if notification_id:
+        try:
+            await bot.delete_message(chat_id=telegram_id, message_id=notification_id)
+            await state.update_data(notification_id=None)
+            logger.debug(f"Уведомление message_id={notification_id} удалено для telegram_id={telegram_id}")
+        except Exception as e:
+            logger.error(f"Ошибка удаления уведомления message_id={notification_id}: {e}")
+
+    # Удаление уведомления об отклонении объявления
+    rejection_notification_id = data_state.get("rejection_notification_id")
+    if rejection_notification_id:
+        try:
+            await bot.delete_message(chat_id=telegram_id, message_id=rejection_notification_id)
+            await state.update_data(rejection_notification_id=None)
+            logger.debug(
+                f"Уведомление об отклонении message_id={rejection_notification_id} удалено для telegram_id={telegram_id}")
+        except Exception as e:
+            logger.error(f"Ошибка удаления уведомления об отклонении message_id={rejection_notification_id}: {e}")
+
+    return await handler(event, data)
+
+# Регистрация middleware после определения dp
 dp.callback_query.outer_middleware(log_callback_middleware)
-
-# Обработчик команды /start
-@dp.message(Command("start"))
-async def start_handler(message: types.Message, state: FSMContext):
-    telegram_id = str(message.from_user.id)
-    menu_message = await message.answer(
-        "🏠Главное меню\nУведомления: Нет",
-        reply_markup=get_main_menu_keyboard()
-    )
-    await state.update_data(initial_message_id=menu_message.message_id)
-    await state.set_state(AdsViewForm.select_category)
-    logger.info(f"Главное меню отправлено для telegram_id={telegram_id}, message_id={menu_message.message_id}")
-
-# Асинхронная функция для уведомления подписчиков (закомментирована)
-# async def notify_subscribers():
-#     while True:
-#         logger.info("Проверка подписок для уведомлений...")
-#         async for session in get_db():
-#             subscriptions = await session.execute(select(Subscription))
-#             subscriptions = subscriptions.scalars().all()
-#             for sub in subscriptions:
-#                 user_result = await session.execute(select(User.is_admin).where(User.id == sub.user_id))
-#                 is_admin = user_result.scalar_one_or_none() or False
-#                 query = (
-#                     select(Advertisement)
-#                     .where(
-#                         Advertisement.status == "approved",
-#                         Advertisement.city == sub.city,
-#                         Advertisement.category == sub.category,
-#                         Advertisement.tags.any(sub.tags[0])
-#                     )
-#                 )
-#                 if not is_admin:
-#                     query = query.where(~Advertisement.id.in_(
-#                         select(ViewedAds.advertisement_id)
-#                         .join(User)
-#                         .where(User.id == sub.user_id)
-#                     ))
-#                 result = await session.execute(query)
-#                 pending_ads = result.scalars().all()
-#                 missed_count = len(pending_ads)
-#                 logger.debug(f"Для user_id={sub.user_id}: найдено {missed_count} объявлений, подписка: city={sub.city}, category={sub.category}, tags={sub.tags}")
-#                 if missed_count > 0:
-#                     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[[
-#                         types.InlineKeyboardButton(text="Смотреть", callback_data="view_subscription_ads")
-#                     ]])
-#                     text = f"У вас {missed_count} непросмотренных объявлений по вашей подписке"
-#                     try:
-#                         await bot.send_message(
-#                             chat_id=sub.user_id,
-#                             text=text,
-#                             reply_markup=keyboard
-#                         )
-#                         logger.info(f"Отправлено уведомление для user_id={sub.user_id}, count={missed_count}")
-#                     except Exception as e:
-#                         logger.error(f"Ошибка отправки уведомления для user_id={sub.user_id}: {e}")
-#         await asyncio.sleep(600)
+dp.callback_query.middleware(clean_notification)
+dp.message.middleware(clean_notification)
 
 async def main():
     logger.info("Запуск бота Froggle...")

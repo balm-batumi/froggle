@@ -82,15 +82,15 @@ async def send_ad_handler(message: types.Message):
     data = {
         "category": category,
         "city": city,
-        "tags": tag,  # Отправляем один тег как строку
+        "tags": tag,
         "title_ru": title_ru,
         "description_ru": description_ru,
-        "price": price if price else "",  # Пустая строка вместо None
+        "price": price if price else "",
         "contact_info": "@TestSender",
         "status": "pending",
         "is_test": True,
         "api_key": API_KEY,
-        "user_id": "test_sender"  # Передаём telegram_id, Froggle найдёт user_id
+        "user_id": "7937566977"
     }
 
     # Отправляем данные и файл через API
