@@ -10,11 +10,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 
 
-# Создает клавиатуру с кнопками "Помощь" и "Назад" для навигации
+# Создает навигационную клавиатуру с кнопками "❓" (Помощь) и "⬅️" (Назад)
 def get_navigation_keyboard() -> InlineKeyboardMarkup:
     buttons = [
-        [InlineKeyboardButton(text="Помощь", callback_data="action:help"),
-         InlineKeyboardButton(text="Назад", callback_data="action:back")]
+        [InlineKeyboardButton(text="❓", callback_data="action:help"),
+         InlineKeyboardButton(text="⬅️", callback_data="action:back")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

@@ -3,13 +3,14 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.filters import Command
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from states import MenuState, AdAddForm
-from database import get_db, User, select, Favorite, Advertisement, remove_from_favorites, add_to_favorites, Subscription, get_cities, get_all_category_tags, Tag
+from states import MenuState, AdAddForm, SubscribeForm, AdsViewForm
+from database import get_db, User, select, Favorite, Advertisement, remove_from_favorites, add_to_favorites, Subscription, get_cities, get_all_category_tags, Tag, ViewedAds
 from data.constants import get_main_menu_keyboard
 from data.categories import CATEGORIES
-from tools.utils import render_ad
+from tools.utils import render_ad, get_navigation_keyboard
 from loguru import logger
-from states import AdsViewForm, SubscribeForm
+from sqlalchemy.sql import func
+
 
 menu_router = Router()
 
@@ -84,7 +85,7 @@ async def settings_handler(call: types.CallbackQuery):
     await call.answer()
 
 
-# Обработчик для отображения и управления подписками
+# Показывает подписки пользователя с кнопками для просмотра новых и всех объявлений
 @menu_router.callback_query(F.data == "action:subscriptions")
 async def subscriptions_handler(call: types.CallbackQuery, state: FSMContext):
     telegram_id = str(call.from_user.id)
@@ -104,48 +105,135 @@ async def subscriptions_handler(call: types.CallbackQuery, state: FSMContext):
         )
         subscriptions = subscriptions_result.scalars().all()
 
+        # Удаляем исходное сообщение
+        await call.message.delete()
+
         if not subscriptions:
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="➕ Добавить", callback_data="action:subscribe"),
-                InlineKeyboardButton(text="❓", callback_data="help:subscriptions"),
-                InlineKeyboardButton(text="⬅️", callback_data="action:settings")
-            ]])
-            await call.message.edit_text(
-                "У вас нет подписок. Создайте первую подписку!",
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="➕ Добавить", callback_data="action:subscribe")]
+            ])
+            keyboard.inline_keyboard.extend(get_navigation_keyboard().inline_keyboard)
+            await call.message.bot.send_message(
+                chat_id=call.from_user.id,
+                text="У вас нет подписок. Создайте первую подписку!",
                 reply_markup=keyboard
             )
         else:
-            # Удаляем предыдущее сообщение
-            await call.message.delete()
-
-            # Выводим каждую подписку как отдельное сообщение
+            # Выводим каждую подписку
             for sub in subscriptions:
+                # Подсчет непросмотренных для подписки
+                missed_count = await session.scalar(
+                    select(func.count(Advertisement.id))
+                    .where(Advertisement.status == "approved")
+                    .where(Advertisement.city == sub.city)
+                    .where(Advertisement.category == sub.category)
+                    .where(~Advertisement.id.in_(select(ViewedAds.advertisement_id).where(ViewedAds.user_id == user.id)))
+                    .where(Advertisement.tags.overlap(sub.tags))
+                )
                 sub_text = (
                     f"Подписка #{sub.id}\n"
                     f"Город: {sub.city}\n"
-                    f"Категория: {sub.category}\n"
+                    f"Категория: {CATEGORIES[sub.category]['display_name']}\n"
                     f"Теги: {', '.join(sub.tags)}"
                 )
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"delete_subscription:{sub.id}")
-                ]])
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text=f"🔔 Новые ({missed_count})" if missed_count > 0 else "🔔 Новых нет",
+                                          callback_data=f"show_new_ads:{sub.id}"),
+                     InlineKeyboardButton(text="📋 Все", callback_data=f"show_all_ads:{sub.id}")],
+                    [InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"delete_subscription:{sub.id}")]
+                ])
                 await call.message.bot.send_message(
                     chat_id=call.from_user.id,
                     text=sub_text,
                     reply_markup=keyboard
                 )
 
-            # Добавляем кнопку "Добавить" (неактивна, если есть подписка)
-            add_button = InlineKeyboardButton(text="➕ Добавить (Пока🔒)",
-                                              callback_data="disabled") if subscriptions else InlineKeyboardButton(
-                text="➕ Добавить", callback_data="action:subscribe")
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                add_button,
-                InlineKeyboardButton(text="⬅️", callback_data="action:settings")
-            ]])
+            # Нижняя строка с кнопками, унифицированная с get_navigation_keyboard
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="➕ Добавить подписку (Пока🔒)", callback_data="disabled")]
+            ])
+            keyboard.inline_keyboard.extend(get_navigation_keyboard().inline_keyboard)
             await call.message.bot.send_message(
                 chat_id=call.from_user.id,
                 text="Ваши подписки 👆",
+                reply_markup=keyboard
+            )
+
+    await call.answer()
+
+
+
+# Обрабатывает показ объявлений по подписке: новые (непросмотренные) или все
+@menu_router.callback_query(F.data.startswith(("show_new_ads:", "show_all_ads:")))
+async def show_subscription_ads(call: types.CallbackQuery, state: FSMContext):
+    telegram_id = str(call.from_user.id)
+    callback_data = call.data
+    action, sub_id = callback_data.split(":", 1)
+    sub_id = int(sub_id)
+    only_new = action == "show_new_ads"  # True для "Новые", False для "Все"
+
+    async for session in get_db():
+        # Получаем пользователя
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            await call.message.edit_text("Пользователь не найден. Используйте /start.",
+                                         reply_markup=get_main_menu_keyboard())
+            return
+
+        # Получаем подписку
+        sub_result = await session.execute(
+            select(Subscription).where(Subscription.id == sub_id, Subscription.user_id == user.id)
+        )
+        subscription = sub_result.scalar_one_or_none()
+        if not subscription:
+            await call.message.edit_text("Подписка не найдена.",
+                                         reply_markup=get_main_menu_keyboard())
+            return
+
+        # Запрос объявлений по фильтрам подписки
+        query = select(Advertisement).where(
+            Advertisement.status == "approved",
+            Advertisement.city == subscription.city,
+            Advertisement.category == subscription.category,
+            Advertisement.tags.overlap(subscription.tags)
+        )
+        if only_new:
+            query = query.where(~Advertisement.id.in_(
+                select(ViewedAds.advertisement_id).where(ViewedAds.user_id == user.id)
+            ))
+
+        ads_result = await session.execute(query.order_by(Advertisement.id))
+        ads = ads_result.scalars().all()
+
+        # Удаляем исходное сообщение
+        await call.message.delete()
+
+        if not ads:
+            keyboard = get_navigation_keyboard()
+            await call.message.bot.send_message(
+                chat_id=call.from_user.id,
+                text="Объявлений по этой подписке не найдено.",
+                reply_markup=keyboard
+            )
+        else:
+            # Отображаем объявления
+            await call.message.bot.send_message(
+                chat_id=call.from_user.id,
+                text=f"Найдено {len(ads)} объявлений по подписке #{sub_id}\n" + "―" * 21
+            )
+            for ad in ads:
+                buttons = [[InlineKeyboardButton(
+                    text="В избранное",
+                    callback_data=f"favorite:add:{ad.id}"
+                )]]
+                await render_ad(ad, call.message.bot, call.from_user.id, show_status=False, buttons=buttons, mark_viewed=True)
+
+            # Добавляем навигацию
+            keyboard = get_navigation_keyboard()
+            await call.message.bot.send_message(
+                chat_id=call.from_user.id,
+                text="Режим просмотра объявлений",
                 reply_markup=keyboard
             )
 

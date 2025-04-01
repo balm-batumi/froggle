@@ -9,6 +9,7 @@ from database import get_db, User, Advertisement, select, ViewedAds, Subscriptio
 from data.constants import get_main_menu_keyboard
 from loguru import logger
 from tools.utils import render_ad, get_navigation_keyboard, delete_messages, notify_user
+from sqlalchemy.sql import func
 
 admin_router = Router()
 
@@ -77,11 +78,10 @@ async def admin_moderate(call: CallbackQuery, state: FSMContext):
     await state.set_state(AdminForm.moderation)
     await call.answer()
 
+
+# Одобряет объявление и уведомляет владельца и подписчиков с оптимизированным подсчетом
 @admin_router.callback_query(F.data.startswith("approve:"))
 async def approve_ad(call: CallbackQuery, state: FSMContext):
-    """
-    Обрабатывает одобрение объявления, удаляет связанные сообщения и уведомляет владельца и подписчиков.
-    """
     logger.debug(f"Вызван approve_ad с callback_data={call.data}, from_id={call.from_user.id}")
     parts = call.data.split(":")
     ad_id = int(parts[1])
@@ -106,43 +106,46 @@ async def approve_ad(call: CallbackQuery, state: FSMContext):
                 short_text = full_text[:35] + "..." if len(full_text) > 35 else full_text
                 await notify_user(bot, user_telegram_id, short_text, state)
 
-            subscriptions = await session.execute(select(Subscription))
+            # Оптимизированная выборка подписок
+            subscriptions = await session.execute(
+                select(Subscription)
+                .where(Subscription.city == ad.city)
+                .where(Subscription.category == ad.category)  # Исправлено с Submission на Subscription
+                .where(Subscription.tags.overlap(ad.tags))
+            )
             subscriptions = subscriptions.scalars().all()
-            logger.debug(f"Найдено подписок: {len(subscriptions)}")
+            logger.debug(f"Найдено релевантных подписок: {len(subscriptions)}")
+
             for sub in subscriptions:
                 user_result = await session.execute(select(User).where(User.id == sub.user_id))
                 user = user_result.scalar_one_or_none()
                 if not user:
                     logger.warning(f"Пользователь для подписки user_id={sub.user_id} не найден")
                     continue
-                if (
-                    ad.city == sub.city and
-                    ad.category == sub.category and
-                    any(tag in ad.tags for tag in sub.tags)
-                ):
-                    query = (
-                        select(Advertisement)
-                        .where(Advertisement.status == "approved")
-                        .where(Advertisement.city == sub.city)
-                        .where(Advertisement.category == sub.category)
-                        .where(~Advertisement.id.in_(select(ViewedAds.advertisement_id).where(ViewedAds.user_id == sub.user_id)))
-                        .where(Advertisement.tags.overlap(sub.tags))
-                    )
-                    result = await session.execute(query)
-                    pending_ads = result.scalars().all()
-                    missed_count = len(pending_ads)
-                    if missed_count > 0:
-                        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                            InlineKeyboardButton(text="Смотреть", callback_data="view_subscription_ads")
-                        ]])
-                        text = f"У вас {missed_count} непросмотренных объявлений по вашей подписке"
-                        await notify_user(bot, user.telegram_id, text, state, reply_markup=keyboard)
-                        logger.info(f"Отправлено уведомление для telegram_id={user.telegram_id}, count={missed_count}")
+
+                # Подсчет непросмотренных объявлений через func.count()
+                query = (
+                    select(func.count(Advertisement.id))
+                    .where(Advertisement.status == "approved")
+                    .where(Advertisement.city == sub.city)
+                    .where(Advertisement.category == sub.category)
+                    .where(~Advertisement.id.in_(
+                        select(ViewedAds.advertisement_id).where(ViewedAds.user_id == sub.user_id)))
+                    .where(Advertisement.tags.overlap(sub.tags))
+                )
+                missed_count = await session.scalar(query)
+
+                if missed_count > 0:
+                    full_text = f"🔔 По подписке {missed_count} новых объ..❓"
+                    short_text = full_text[:35] if len(full_text) > 35 else full_text
+                    await notify_user(bot, user.telegram_id, short_text, state)
+                    logger.info(f"Отправлено уведомление для telegram_id={user.telegram_id}, count={missed_count}")
 
             await bot.send_message(chat_id=telegram_id, text=f"Объявление #{ad_id} одобрено")
             await send_navigation_keyboard(bot, telegram_id, state)
 
     await call.answer()
+
 
 @admin_router.callback_query(F.data.startswith("reject:"))
 async def reject_ad(call: CallbackQuery, state: FSMContext):
