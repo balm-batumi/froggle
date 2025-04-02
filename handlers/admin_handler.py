@@ -136,7 +136,7 @@ async def approve_ad(call: CallbackQuery, state: FSMContext):
                 missed_count = await session.scalar(query)
 
                 if missed_count > 0:
-                    full_text = f"🔔 По подписке {missed_count} новых объ..❓"
+                    full_text = f"🔔 По подписке {missed_count} новых объ..ℹ️"
                     short_text = full_text[:35] if len(full_text) > 35 else full_text
                     await notify_user(bot, user.telegram_id, short_text, state)
                     logger.info(f"Отправлено уведомление для telegram_id={user.telegram_id}, count={missed_count}")
@@ -179,7 +179,7 @@ async def reject_ad(call: CallbackQuery, state: FSMContext):
             if old_nav_message_id:
                 await delete_messages(bot, telegram_id, [old_nav_message_id])
 
-            await bot.send_message(chat_id=telegram_id, text=f"❌ Объявление #{ad_id} отклонено.")
+            await bot.send_message(chat_id=telegram_id, text=f"❌Объявление #{ad_id} отклон..ℹ️")
             await send_navigation_keyboard(bot, telegram_id, state)
 
     await call.answer()
@@ -254,7 +254,7 @@ async def delete_ad_confirmed(call: CallbackQuery, state: FSMContext):
             await session.commit()
             logger.info(f"Объявление #{ad_id} удалено модератором telegram_id={telegram_id}")
             if user_telegram_id and user_telegram_id != telegram_id:
-                await notify_user(bot, user_telegram_id, f"🗑 Ваше объявление #{ad_id} удалено модератором.", state)
+                await notify_user(bot, user_telegram_id, f"🗑 Объявление #{ad_id} удалено ℹ️", state)
 
     try:
         await bot.edit_message_text(

@@ -90,7 +90,7 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
     ])
     keyboard.inline_keyboard.append(get_navigation_keyboard().inline_keyboard[0])  # Добавляем "Помощь" и "Назад"
     await call.message.edit_text(
-        f"Выберите теги для фильтрации в {city} (или нажмите Найти для поиска без фильтров):",
+        f"Выберите теги для <b>{city}</b> (или нажмите <b>Найти</b> для поиска без фильтров):",
         reply_markup=keyboard
     )
     await state.set_state(AdsViewForm.select_tags)
@@ -98,7 +98,7 @@ async def show_ads_by_city(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 
-# Обрабатывает выбор тегов и выводит отфильтрованные объявления по принципу "ИЛИ"
+# Обрабатывает выбор тегов и выводит отфильтрованные объявления по принципу "ИЛИ" с лимитом в 3 тега
 @ads_router.callback_query(F.data.startswith(("tag:", "only_new", "skip")), StateFilter(AdsViewForm.select_tags))
 async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
     telegram_id = str(call.from_user.id)
@@ -120,6 +120,10 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
 
     if callback_data.startswith("tag:"):
         tag_id = int(callback_data.split(":")[1])
+        # Проверка лимита в 3 тега
+        if len(tags) >= 3:
+            await call.answer("Ваш максимум - 3 тега", show_alert=True)
+            return
         async for session in get_db():
             result = await session.execute(select(Tag).where(Tag.id == tag_id))
             tag = result.scalar_one_or_none()
@@ -141,7 +145,8 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
         if only_new:
             selected_filters.append("Только новые")
         await call.message.edit_text(
-            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}, или нажмите Найти для поиска):",
+            f"Выбирайте теги для <b>{city}</b> (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}).\n"
+            f"Выбрали - нажмите <b>Найти</b>.",
             reply_markup=keyboard
         )
         return
@@ -163,7 +168,8 @@ async def process_tag_filter(call: types.CallbackQuery, state: FSMContext):
         if only_new:
             selected_filters.append("Только новые")
         await call.message.edit_text(
-            f"Выберите теги для фильтрации в {city} (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}, или нажмите Найти для поиска):",
+            f"Выбирайте теги для <b>{city}</b> (выбрано: {', '.join(selected_filters) if selected_filters else 'ничего'}).\n"
+            f"Выбрали - нажмите <b>Найти</b>.",
             reply_markup=keyboard
         )
         await call.answer(f"Фильтр 'Только новые': {'вкл' if only_new else 'выкл'}")
